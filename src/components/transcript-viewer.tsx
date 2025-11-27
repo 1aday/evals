@@ -873,7 +873,6 @@ function ChatTab({
                     }}
                     className="px-2.5 py-1 text-[11px] font-medium text-stone-500 bg-white border border-stone-200 rounded-md hover:border-stone-300 hover:text-stone-700 transition-all"
                   >
-                    <span>{template.icon}</span>
                     {template.label}
                   </button>
                 ))}
@@ -881,7 +880,7 @@ function ChatTab({
             </div>
 
             {/* Panel footer */}
-            <div className="flex-shrink-0 p-4 border-t border-stone-200 bg-gradient-to-t from-stone-100 to-stone-50">
+            <div className="flex-shrink-0 px-4 py-3 border-t border-stone-100">
               <button
                 onClick={async () => {
                   // Save current editing prompt before closing
@@ -890,7 +889,7 @@ function ChatTab({
                   }
                   setShowPromptEditor(false);
                 }}
-                className="w-full py-3.5 px-4 bg-gradient-to-r from-stone-800 to-stone-900 hover:from-stone-900 hover:to-black text-white text-[14px] font-bold rounded-xl transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full py-2.5 px-4 bg-stone-800 hover:bg-stone-900 text-white text-[13px] font-medium rounded-lg transition-all"
               >
                 Done
               </button>
