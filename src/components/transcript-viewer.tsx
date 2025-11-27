@@ -148,10 +148,39 @@ interface SearchStatus {
 
 // Model config
 const MODEL_CONFIG = {
-  'gpt-5.1': { name: 'GPT-5.1', desc: 'Latest flagship', color: 'from-violet-500 to-purple-600', badge: 'NEW' },
-  'gpt-5': { name: 'GPT-5', desc: 'Flagship model', color: 'from-indigo-500 to-blue-600', badge: null },
-  'gpt-5-mini': { name: 'GPT-5 Mini', desc: 'Balanced', color: 'from-cyan-500 to-teal-600', badge: null },
-  'gpt-5-nano': { name: 'GPT-5 Nano', desc: 'Fast', color: 'from-emerald-500 to-green-600', badge: null },
+  'gpt-5': { 
+    name: 'GPT-5', 
+    desc: 'Most capable', 
+    color: 'from-indigo-500 to-blue-600',
+    badge: 'bg-indigo-500',
+    icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
+      </svg>
+    ),
+  },
+  'gpt-5-mini': { 
+    name: 'Mini', 
+    desc: 'Balanced', 
+    color: 'from-cyan-500 to-teal-600',
+    badge: 'bg-cyan-500',
+    icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+      </svg>
+    ),
+  },
+  'gpt-5-nano': { 
+    name: 'Nano', 
+    desc: 'Fast', 
+    color: 'from-emerald-500 to-green-600',
+    badge: 'bg-emerald-500',
+    icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+  },
 } as const;
 
 // Default system prompts for each model
@@ -188,11 +217,37 @@ Guidelines:
 };
 
 const REASONING_CONFIG = {
-  'none': { name: 'None', desc: 'Fastest responses', icon: '⚡' },
-  'minimal': { name: 'Minimal', desc: 'Light thinking', icon: '💭' },
-  'low': { name: 'Low', desc: 'Some reasoning', icon: '🧠' },
-  'medium': { name: 'Medium', desc: 'Balanced', icon: '🎯' },
-  'high': { name: 'High', desc: 'Deep analysis', icon: '🔬' },
+  'none': { 
+    name: 'Off', 
+    desc: 'Fastest responses, no reasoning', 
+    level: 0,
+  },
+  'minimal': { 
+    name: 'Light', 
+    desc: 'Quick thinking, minimal analysis', 
+    level: 1,
+  },
+  'low': { 
+    name: 'Basic', 
+    desc: 'Some reasoning applied', 
+    level: 2,
+  },
+  'medium': { 
+    name: 'Balanced', 
+    desc: 'Good balance of speed and depth', 
+    level: 3,
+  },
+  'high': { 
+    name: 'Deep', 
+    desc: 'Thorough analysis and reasoning', 
+    level: 4,
+  },
+} as const;
+
+const VERBOSITY_CONFIG = {
+  'low': { name: 'Concise', desc: 'Brief, to the point' },
+  'medium': { name: 'Balanced', desc: 'Standard detail level' },
+  'high': { name: 'Detailed', desc: 'Comprehensive responses' },
 } as const;
 
 // Chat Tab Component
@@ -326,8 +381,12 @@ function ChatTab({
       displayContent = `[Analyze ${attachedMessages.length} attached message${attachedMessages.length > 1 ? 's' : ''}]`;
     }
 
+    // Generate proper UUIDs for Supabase compatibility
+    const userMessageId = crypto.randomUUID();
+    const assistantId = crypto.randomUUID();
+    
     const userMessage: ChatMessage = {
-      id: Date.now().toString(),
+      id: userMessageId,
       role: 'user',
       content: displayContent,
     };
@@ -344,7 +403,6 @@ function ChatTab({
     }
 
     // Create assistant message placeholder
-    const assistantId = (Date.now() + 1).toString();
     setChatMessages(prev => [...prev, {
       id: assistantId,
       role: 'assistant',
@@ -476,13 +534,13 @@ function ChatTab({
 
   return (
     <div className="flex-1 flex flex-col bg-white">
-      {/* Header with settings */}
-      <div className="flex-shrink-0 border-b border-stone-100 bg-white">
-        <div className="max-w-4xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between gap-4">
-            {/* Model selector - pill style */}
+      {/* Compact header bar */}
+      <div className="flex-shrink-0 border-b border-stone-100 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-4 py-2.5">
+          <div className="flex items-center justify-between gap-3">
+            {/* Left: Model selector pill */}
             <div className="flex items-center gap-2">
-              <div className="flex bg-stone-100 rounded-full p-1">
+              <div className="flex items-center bg-stone-100/80 rounded-full p-0.5">
                 {(Object.keys(MODEL_CONFIG) as Array<keyof typeof MODEL_CONFIG>).map((model) => {
                   const config = MODEL_CONFIG[model];
                   const isActive = settings.model === model;
@@ -490,81 +548,85 @@ function ChatTab({
                     <button
                       key={model}
                       onClick={() => setSettings(s => ({ ...s, model }))}
-                      className={`relative px-3 py-1.5 rounded-full text-[12px] font-medium transition-all ${
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium transition-all duration-200 ${
                         isActive 
-                          ? `bg-gradient-to-r ${config.color} text-white shadow-sm` 
+                          ? `bg-white text-stone-800 shadow-sm` 
                           : 'text-stone-500 hover:text-stone-700'
                       }`}
                     >
+                      {isActive && <span className={`w-1.5 h-1.5 rounded-full ${config.badge}`} />}
                       {config.name}
-                      {config.badge && (
-                        <span className={`absolute -top-1 -right-1 px-1 py-0.5 text-[8px] font-bold rounded ${
-                          isActive ? 'bg-white/20 text-white' : 'bg-violet-100 text-violet-600'
-                        }`}>
-                          {config.badge}
-                        </span>
-                      )}
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* Right side controls */}
-            <div className="flex items-center gap-2">
+            {/* Right: Action buttons */}
+            <div className="flex items-center gap-1.5">
               {chatMessages.length > 0 && (
                 <button
                   onClick={clearChatHandler}
-                  className="px-3 py-1.5 text-[12px] text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                  className="px-2.5 py-1.5 text-[11px] font-medium text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"
                 >
                   Clear
                 </button>
               )}
+              
+              {/* Prompt editor button */}
               <button
                 onClick={() => {
                   setSelectedPromptModel(settings.model);
                   setEditingPrompt(systemPrompts[settings.model] || DEFAULT_SYSTEM_PROMPTS[settings.model] || '');
                   setShowPromptEditor(true);
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all ${
+                className={`relative flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
                   systemPrompts[settings.model] !== DEFAULT_SYSTEM_PROMPTS[settings.model]
                     ? 'bg-amber-50 text-amber-600 hover:bg-amber-100' 
                     : 'text-stone-500 hover:text-stone-700 hover:bg-stone-100'
                 }`}
                 title="Edit system prompt"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5" />
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
                 </svg>
-                Prompt
                 {systemPrompts[settings.model] !== DEFAULT_SYSTEM_PROMPTS[settings.model] && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white" />
                 )}
               </button>
+
+              {/* Settings toggle */}
               <button
                 onClick={() => setShowSettings(!showSettings)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all ${
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
                   showSettings 
-                    ? 'bg-indigo-100 text-indigo-600' 
+                    ? 'bg-stone-800 text-white' 
                     : 'text-stone-500 hover:text-stone-700 hover:bg-stone-100'
                 }`}
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                <svg className={`w-3.5 h-3.5 transition-transform duration-200 ${showSettings ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
                 </svg>
-                Settings
               </button>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Expandable settings panel */}
-          {showSettings && (
-            <div className="mt-4 p-4 bg-gradient-to-br from-stone-50 to-stone-100/50 rounded-2xl border border-stone-200">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Reasoning Effort - Visual selector */}
-                <div>
-                  <label className="block text-[11px] font-semibold text-stone-500 uppercase tracking-wide mb-3">Reasoning Effort</label>
-                  <div className="grid grid-cols-5 gap-1.5">
+      {/* Settings Panel - Slide down */}
+      <div className={`overflow-hidden transition-all duration-300 ease-out ${showSettings ? 'max-h-[400px] opacity-100' : 'max-h-0 opacity-0'}`}>
+        <div className="border-b border-stone-100 bg-gradient-to-b from-stone-50/80 to-white">
+          <div className="max-w-4xl mx-auto px-4 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              
+              {/* Reasoning Effort - Slider style */}
+              <div className="md:col-span-2">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-[11px] font-semibold text-stone-500 uppercase tracking-wide">Reasoning</label>
+                  <span className="text-[11px] text-stone-400">{REASONING_CONFIG[settings.reasoningEffort].desc}</span>
+                </div>
+                <div className="relative">
+                  <div className="flex items-center bg-stone-100 rounded-xl p-1 gap-0.5">
                     {(Object.keys(REASONING_CONFIG) as Array<keyof typeof REASONING_CONFIG>).map((effort) => {
                       const config = REASONING_CONFIG[effort];
                       const isActive = settings.reasoningEffort === effort;
@@ -575,109 +637,112 @@ function ChatTab({
                           key={effort}
                           onClick={() => !isDisabled && setSettings(s => ({ ...s, reasoningEffort: effort }))}
                           disabled={isDisabled}
-                          className={`relative flex flex-col items-center p-2.5 rounded-xl transition-all ${
+                          className={`relative flex-1 py-2 px-1 rounded-lg text-[11px] font-medium transition-all duration-200 ${
                             isDisabled 
-                              ? 'opacity-30 cursor-not-allowed' 
+                              ? 'opacity-30 cursor-not-allowed text-stone-400' 
                               : isActive 
-                                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/25 scale-105' 
-                                : 'bg-white hover:bg-indigo-50 text-stone-600 hover:text-indigo-600 border border-stone-200 hover:border-indigo-200'
+                                ? 'bg-white text-stone-900 shadow-sm' 
+                                : 'text-stone-500 hover:text-stone-700'
                           }`}
                         >
-                          <span className="text-lg mb-0.5">{config.icon}</span>
-                          <span className="text-[10px] font-semibold">{config.name}</span>
+                          <div className="flex flex-col items-center gap-0.5">
+                            {/* Level indicator dots */}
+                            <div className="flex gap-0.5">
+                              {[...Array(5)].map((_, i) => (
+                                <div 
+                                  key={i} 
+                                  className={`w-1 h-1 rounded-full transition-colors ${
+                                    i <= config.level 
+                                      ? isActive ? 'bg-indigo-500' : 'bg-stone-400' 
+                                      : 'bg-stone-200'
+                                  }`} 
+                                />
+                              ))}
+                            </div>
+                            <span>{config.name}</span>
+                          </div>
                         </button>
                       );
                     })}
                   </div>
-                  <p className="text-[10px] text-stone-400 mt-2 text-center">
-                    {REASONING_CONFIG[settings.reasoningEffort].desc}
-                  </p>
-                  {/* Web search incompatibility warning */}
-                  {settings.reasoningEffort === 'minimal' && (
-                    <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
-                      <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                      <span className="text-[11px] text-amber-700 font-medium">Web search is not available with Minimal reasoning</span>
-                    </div>
-                  )}
                 </div>
-
-                {/* Verbosity - Slider style */}
-                <div>
-                  <label className="block text-[11px] font-semibold text-stone-500 uppercase tracking-wide mb-3">Response Length</label>
-                  <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-stone-200">
-                    <button
-                      onClick={() => setSettings(s => ({ ...s, verbosity: 'low' }))}
-                      className={`flex-1 py-2 rounded-lg text-[12px] font-medium transition-all ${
-                        settings.verbosity === 'low' ? 'bg-emerald-500 text-white' : 'text-stone-500 hover:bg-stone-50'
-                      }`}
-                    >
-                      <span className="block text-sm mb-0.5">📝</span>
-                      Concise
-                    </button>
-                    <button
-                      onClick={() => setSettings(s => ({ ...s, verbosity: 'medium' }))}
-                      className={`flex-1 py-2 rounded-lg text-[12px] font-medium transition-all ${
-                        settings.verbosity === 'medium' ? 'bg-blue-500 text-white' : 'text-stone-500 hover:bg-stone-50'
-                      }`}
-                    >
-                      <span className="block text-sm mb-0.5">📄</span>
-                      Balanced
-                    </button>
-                    <button
-                      onClick={() => setSettings(s => ({ ...s, verbosity: 'high' }))}
-                      className={`flex-1 py-2 rounded-lg text-[12px] font-medium transition-all ${
-                        settings.verbosity === 'high' ? 'bg-purple-500 text-white' : 'text-stone-500 hover:bg-stone-50'
-                      }`}
-                    >
-                      <span className="block text-sm mb-0.5">📚</span>
-                      Detailed
-                    </button>
+                {/* Web search warning */}
+                {settings.reasoningEffort === 'minimal' && (
+                  <div className="mt-2 flex items-center gap-1.5 text-[10px] text-amber-600">
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                    </svg>
+                    Web search unavailable with Light reasoning
                   </div>
-                </div>
+                )}
               </div>
 
-              {/* Current config summary */}
-              <div className="mt-4 flex items-center justify-between p-3 bg-white/60 rounded-xl">
-                <div className="flex items-center gap-3 text-[11px] text-stone-500">
-                  <span className="flex items-center gap-1">
-                    <span className={`w-2 h-2 rounded-full bg-gradient-to-r ${MODEL_CONFIG[settings.model].color}`}></span>
-                    {MODEL_CONFIG[settings.model].name}
-                  </span>
-                  <span>•</span>
-                  <span>{REASONING_CONFIG[settings.reasoningEffort].icon} {REASONING_CONFIG[settings.reasoningEffort].name} reasoning</span>
-                  <span>•</span>
-                  <span>{settings.verbosity === 'low' ? '📝' : settings.verbosity === 'medium' ? '📄' : '📚'} {settings.verbosity} verbosity</span>
+              {/* Response Length - Segmented control */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-[11px] font-semibold text-stone-500 uppercase tracking-wide">Response Length</label>
+                </div>
+                <div className="flex items-center bg-stone-100 rounded-xl p-1 gap-0.5">
+                  {(Object.keys(VERBOSITY_CONFIG) as Array<keyof typeof VERBOSITY_CONFIG>).map((level) => {
+                    const config = VERBOSITY_CONFIG[level];
+                    const isActive = settings.verbosity === level;
+                    
+                    return (
+                      <button
+                        key={level}
+                        onClick={() => setSettings(s => ({ ...s, verbosity: level }))}
+                        className={`flex-1 py-2 px-2 rounded-lg text-[11px] font-medium transition-all duration-200 ${
+                          isActive 
+                            ? 'bg-white text-stone-900 shadow-sm' 
+                            : 'text-stone-500 hover:text-stone-700'
+                        }`}
+                      >
+                        {config.name}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
-          )}
+
+            {/* Compact status bar */}
+            <div className="mt-3 pt-3 border-t border-stone-100 flex items-center justify-between">
+              <div className="flex items-center gap-3 text-[10px] text-stone-400">
+                <span className="flex items-center gap-1.5">
+                  <span className={`w-1.5 h-1.5 rounded-full ${MODEL_CONFIG[settings.model].badge}`} />
+                  {MODEL_CONFIG[settings.model].name}
+                </span>
+                <span className="text-stone-200">|</span>
+                <span>{REASONING_CONFIG[settings.reasoningEffort].name} reasoning</span>
+                <span className="text-stone-200">|</span>
+                <span>{VERBOSITY_CONFIG[settings.verbosity].name}</span>
+              </div>
+              <button 
+                onClick={() => setShowSettings(false)}
+                className="text-[10px] text-stone-400 hover:text-stone-600 transition-colors"
+              >
+                Collapse
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* System Prompt Editor Panel */}
       {showPromptEditor && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setShowPromptEditor(false)} />
-          <div className="relative w-full max-w-2xl bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowPromptEditor(false)} />
+          <div className="relative w-full max-w-xl bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
             {/* Panel header */}
-            <div className="flex-shrink-0 p-5 border-b border-stone-200 bg-gradient-to-r from-stone-800 to-stone-900">
+            <div className="flex-shrink-0 px-5 py-4 border-b border-stone-100">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-[16px] font-semibold text-white">System Prompts</h3>
-                    <p className="text-[12px] text-white/60 mt-0.5">Customize AI behavior for each model</p>
-                  </div>
+                <div>
+                  <h3 className="text-[15px] font-semibold text-stone-800">System Prompts</h3>
+                  <p className="text-[11px] text-stone-400 mt-0.5">Customize behavior per model</p>
                 </div>
                 <button
                   onClick={() => setShowPromptEditor(false)}
-                  className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                  className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -687,8 +752,8 @@ function ChatTab({
             </div>
 
             {/* Model tabs */}
-            <div className="flex-shrink-0 border-b border-stone-200 bg-stone-50">
-              <div className="flex overflow-x-auto scrollbar-hide">
+            <div className="flex-shrink-0 border-b border-stone-100 bg-white">
+              <div className="flex">
                 {(Object.keys(MODEL_CONFIG) as Array<keyof typeof MODEL_CONFIG>).map((model) => {
                   const config = MODEL_CONFIG[model];
                   const isActive = selectedPromptModel === model;
@@ -701,21 +766,16 @@ function ChatTab({
                         setSelectedPromptModel(model);
                         setEditingPrompt(systemPrompts[model] || DEFAULT_SYSTEM_PROMPTS[model] || '');
                       }}
-                      className={`relative flex items-center gap-2 px-5 py-3.5 text-[13px] font-medium whitespace-nowrap transition-all border-b-2 ${
+                      className={`relative flex items-center gap-2 px-5 py-3 text-[12px] font-medium whitespace-nowrap transition-all border-b-2 ${
                         isActive 
-                          ? 'text-stone-800 border-stone-800 bg-white' 
-                          : 'text-stone-500 border-transparent hover:text-stone-700 hover:bg-stone-100'
+                          ? 'text-stone-800 border-stone-800' 
+                          : 'text-stone-400 border-transparent hover:text-stone-600'
                       }`}
                     >
-                      <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${config.color}`} />
+                      <span className={`w-1.5 h-1.5 rounded-full ${config.badge}`} />
                       {config.name}
                       {isModified && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" title="Modified" />
-                      )}
-                      {config.badge && (
-                        <span className="px-1.5 py-0.5 text-[9px] font-bold bg-violet-100 text-violet-600 rounded">
-                          {config.badge}
-                        </span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" title="Modified" />
                       )}
                     </button>
                   );
@@ -724,47 +784,34 @@ function ChatTab({
             </div>
 
             {/* Editor area */}
-            <div className="flex-1 flex flex-col min-h-0 p-5">
-              {/* Current model info */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${MODEL_CONFIG[selectedPromptModel as keyof typeof MODEL_CONFIG]?.color || 'from-stone-400 to-stone-500'} flex items-center justify-center shadow-md`}>
-                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="text-[14px] font-semibold text-stone-800">
+            <div className="flex-1 flex flex-col min-h-0 p-4">
+              {/* Textarea with header */}
+              <div className="flex-1 min-h-0 flex flex-col">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${MODEL_CONFIG[selectedPromptModel as keyof typeof MODEL_CONFIG]?.badge || 'bg-stone-400'}`} />
+                    <span className="text-[12px] font-medium text-stone-700">
                       {MODEL_CONFIG[selectedPromptModel as keyof typeof MODEL_CONFIG]?.name || selectedPromptModel}
-                    </h4>
-                    <p className="text-[11px] text-stone-500">
-                      {MODEL_CONFIG[selectedPromptModel as keyof typeof MODEL_CONFIG]?.desc || 'Custom model'}
-                    </p>
+                    </span>
+                    <span className="text-[11px] text-stone-400">
+                      · {MODEL_CONFIG[selectedPromptModel as keyof typeof MODEL_CONFIG]?.desc || 'Custom model'}
+                    </span>
                   </div>
+                  
+                  {/* Reset button */}
+                  {systemPrompts[selectedPromptModel] !== DEFAULT_SYSTEM_PROMPTS[selectedPromptModel] && (
+                    <button
+                      onClick={async () => {
+                        await resetPrompt(selectedPromptModel);
+                        setEditingPrompt(DEFAULT_SYSTEM_PROMPTS[selectedPromptModel] || '');
+                      }}
+                      className="text-[11px] font-medium text-amber-600 hover:text-amber-700 transition-colors"
+                    >
+                      Reset to default
+                    </button>
+                  )}
                 </div>
                 
-                {/* Reset button */}
-                {systemPrompts[selectedPromptModel] !== DEFAULT_SYSTEM_PROMPTS[selectedPromptModel] && (
-                  <button
-                    onClick={async () => {
-                      await resetPrompt(selectedPromptModel);
-                      setEditingPrompt(DEFAULT_SYSTEM_PROMPTS[selectedPromptModel] || '');
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    Reset to default
-                  </button>
-                )}
-              </div>
-
-              {/* Textarea */}
-              <div className="flex-1 min-h-0 flex flex-col">
-                <label className="block text-[11px] font-semibold text-stone-500 uppercase tracking-wide mb-2">
-                  System Instructions
-                </label>
                 <div className="flex-1 relative">
                   <textarea
                     value={editingPrompt || systemPrompts[selectedPromptModel] || DEFAULT_SYSTEM_PROMPTS[selectedPromptModel] || ''}
@@ -775,21 +822,21 @@ function ChatTab({
                         await savePrompt(selectedPromptModel, editingPrompt);
                       }
                     }}
-                    placeholder="Enter system instructions for this model..."
-                    className="absolute inset-0 w-full h-full p-4 text-[14px] leading-relaxed text-stone-700 bg-stone-50 border border-stone-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-stone-400/30 focus:border-stone-400 placeholder:text-stone-400 font-mono"
+                    placeholder="Enter system instructions..."
+                    className="absolute inset-0 w-full h-full p-3 text-[13px] leading-relaxed text-stone-700 bg-stone-50 border border-stone-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-stone-300/50 focus:border-stone-300 placeholder:text-stone-400 font-mono"
                   />
                 </div>
-                <div className="flex items-center justify-between mt-3">
-                  <span className="text-[11px] text-stone-400">
-                    {(editingPrompt || systemPrompts[selectedPromptModel] || '').length} characters
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-stone-100">
+                  <span className="text-[10px] text-stone-400">
+                    {(editingPrompt || systemPrompts[selectedPromptModel] || '').length} chars
                   </span>
-                  <span className="text-[11px] text-stone-400 flex items-center gap-1.5">
+                  <span className="text-[10px] text-stone-400 flex items-center gap-1">
                     {promptsSynced ? (
                       <>
                         <svg className="w-3 h-3 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
-                        <span className="text-emerald-600">Synced to cloud</span>
+                        <span className="text-emerald-500">Saved</span>
                       </>
                     ) : promptsLoading ? (
                       <>
@@ -797,26 +844,26 @@ function ChatTab({
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                         </svg>
-                        <span>Syncing...</span>
+                        <span>Saving</span>
                       </>
                     ) : (
-                      <span>Auto-saves on blur</span>
+                      <span>Auto-saves</span>
                     )}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Quick templates */}
-            <div className="flex-shrink-0 border-t border-stone-200 bg-stone-50 p-4">
-              <p className="text-[11px] font-semibold text-stone-500 uppercase tracking-wide mb-3">Quick Templates</p>
-              <div className="flex flex-wrap gap-2">
+            {/* Quick templates - more subtle */}
+            <div className="flex-shrink-0 border-t border-stone-100 bg-stone-50/50 px-4 py-3">
+              <p className="text-[10px] font-medium text-stone-400 uppercase tracking-wide mb-2">Templates</p>
+              <div className="flex flex-wrap gap-1.5">
                 {[
-                  { label: 'Concise', icon: '📝', prompt: 'Be concise and direct. Avoid unnecessary words. Get to the point quickly.' },
-                  { label: 'Detailed', icon: '📚', prompt: 'Provide comprehensive, detailed responses. Include examples, explanations, and context. Be thorough.' },
-                  { label: 'Technical', icon: '⚙️', prompt: 'Use precise technical language. Include code examples when relevant. Assume technical competency.' },
-                  { label: 'Friendly', icon: '😊', prompt: 'Be warm, friendly, and conversational. Use casual language. Make the interaction enjoyable.' },
-                  { label: 'Academic', icon: '🎓', prompt: 'Use formal academic tone. Cite reasoning. Structure responses logically with clear arguments.' },
+                  { label: 'Concise', prompt: 'Be concise and direct. Avoid unnecessary words. Get to the point quickly.' },
+                  { label: 'Detailed', prompt: 'Provide comprehensive, detailed responses. Include examples, explanations, and context. Be thorough.' },
+                  { label: 'Technical', prompt: 'Use precise technical language. Include code examples when relevant. Assume technical competency.' },
+                  { label: 'Friendly', prompt: 'Be warm, friendly, and conversational. Use casual language. Make the interaction enjoyable.' },
+                  { label: 'Academic', prompt: 'Use formal academic tone. Cite reasoning. Structure responses logically with clear arguments.' },
                 ].map((template) => (
                   <button
                     key={template.label}
@@ -824,7 +871,7 @@ function ChatTab({
                       setEditingPrompt(template.prompt);
                       await savePrompt(selectedPromptModel, template.prompt);
                     }}
-                    className="flex items-center gap-1.5 px-3 py-2 text-[12px] font-medium text-stone-600 bg-white border border-stone-200 rounded-lg hover:border-stone-300 hover:bg-stone-50 transition-all"
+                    className="px-2.5 py-1 text-[11px] font-medium text-stone-500 bg-white border border-stone-200 rounded-md hover:border-stone-300 hover:text-stone-700 transition-all"
                   >
                     <span>{template.icon}</span>
                     {template.label}
@@ -1059,94 +1106,117 @@ function ChatTab({
 
                 {/* Content */}
                 <div className={`flex-1 max-w-[85%] ${msg.role === 'user' ? 'text-right' : ''}`}>
-                  {/* Web Search indicator */}
+                  {/* Web Search indicator - Enhanced UI */}
                   {msg.searchStatus && (
-                    <div className={`mb-3 overflow-hidden rounded-2xl ${
+                    <div className={`mb-3 rounded-2xl border overflow-hidden transition-all duration-500 ${
                       msg.searchStatus.searching 
-                        ? 'bg-gradient-to-br from-sky-500 via-blue-500 to-indigo-600' 
-                        : 'bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600'
-                    } p-[1px]`}>
-                      <div className="bg-white/95 backdrop-blur-sm rounded-[15px] p-4">
-                        <div className="flex items-center gap-3">
-                          {/* Animated Globe */}
-                          <div className={`relative flex-shrink-0 w-11 h-11 rounded-full ${
-                            msg.searchStatus.searching 
-                              ? 'bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600' 
-                              : 'bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-600'
-                          } shadow-lg shadow-sky-500/30 flex items-center justify-center`}>
-                            {msg.searchStatus.searching ? (
-                              <>
-                                {/* Globe base */}
-                                <svg className="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none">
-                                  {/* Outer circle */}
-                                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.4"/>
-                                  {/* Equator */}
-                                  <ellipse cx="12" cy="12" rx="10" ry="4" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.5"/>
-                                  {/* Meridian - animated */}
-                                  <g className="origin-center" style={{ animation: 'spin 4s linear infinite' }}>
-                                    <ellipse cx="12" cy="12" rx="4" ry="10" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.6"/>
-                                  </g>
-                                </svg>
-                                {/* Soft glow pulse */}
-                                <div className="absolute inset-0 rounded-full bg-white/20 animate-pulse" style={{ animationDuration: '2s' }} />
-                                {/* Rotating highlight arc */}
-                                <div className="absolute inset-1 rounded-full overflow-hidden">
-                                  <div className="absolute inset-0 animate-spin" style={{ animationDuration: '3s' }}>
-                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-1/2 bg-gradient-to-b from-white/30 to-transparent rounded-t-full" />
-                                  </div>
-                                </div>
-                              </>
-                            ) : (
-                              /* Completed checkmark */
-                              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        ? 'bg-gradient-to-br from-sky-50 to-blue-50 border-sky-200' 
+                        : 'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200'
+                    }`}>
+                      {/* Header */}
+                      <div className={`px-4 py-3 flex items-center gap-3 ${
+                        msg.searchStatus.searching 
+                          ? 'bg-gradient-to-r from-sky-500 to-blue-600' 
+                          : 'bg-gradient-to-r from-emerald-500 to-teal-600'
+                      }`}>
+                        {/* Animated icon */}
+                        <div className="relative w-8 h-8 flex items-center justify-center">
+                          {msg.searchStatus.searching ? (
+                            <>
+                              <svg className="w-6 h-6 text-white animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                               </svg>
-                            )}
-                          </div>
-                          
-                          {/* Text content */}
-                          <div className="flex-1 min-w-0">
-                            <span className={`text-[13px] font-semibold ${
-                              msg.searchStatus.searching ? 'text-sky-700' : 'text-emerald-700'
-                            }`}>
-                              {msg.searchStatus.searching ? 'Searching the web' : 'Search complete'}
-                            </span>
-                            <p className={`text-[11px] mt-0.5 ${
-                              msg.searchStatus.searching ? 'text-sky-500/80' : 'text-emerald-600'
-                            }`}>
-                              {msg.searchStatus.searching 
-                                ? 'Finding relevant sources...' 
-                                : `${msg.searchStatus.sources?.length || 0} sources found`
-                              }
-                            </p>
-                          </div>
+                              <div className="absolute inset-0 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                            </>
+                          ) : (
+                            <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          )}
                         </div>
                         
-                        {/* Sources */}
-                        {msg.searchStatus.completed && msg.searchStatus.sources && msg.searchStatus.sources.length > 0 && (
-                          <div className="mt-3 pt-3 border-t border-stone-100">
-                            <div className="flex flex-wrap gap-2">
-                              {msg.searchStatus.sources.slice(0, 5).map((source, idx) => (
+                        <div className="flex-1">
+                          <p className="text-[13px] font-semibold text-white">
+                            {msg.searchStatus.searching ? 'Searching the web...' : 'Web search complete'}
+                          </p>
+                          <p className="text-[11px] text-white/80">
+                            {msg.searchStatus.searching 
+                              ? 'Finding and reading sources' 
+                              : `Found ${msg.searchStatus.sources?.length || 0} relevant sources`
+                            }
+                          </p>
+                        </div>
+
+                        {/* Live indicator when searching */}
+                        {msg.searchStatus.searching && (
+                          <div className="flex items-center gap-1.5 px-2 py-1 bg-white/20 rounded-full">
+                            <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                            <span className="text-[10px] font-medium text-white uppercase tracking-wide">Live</span>
+                          </div>
+                        )}
+                      </div>
+
+                        
+                      {/* Sources grid */}
+                      {msg.searchStatus.completed && msg.searchStatus.sources && msg.searchStatus.sources.length > 0 && (
+                        <div className="p-3">
+                          <div className="grid gap-2">
+                            {msg.searchStatus.sources.slice(0, 6).map((source, idx) => {
+                              let hostname = '';
+                              try {
+                                hostname = new URL(source.url).hostname.replace('www.', '');
+                              } catch {
+                                hostname = source.url;
+                              }
+                              
+                              return (
                                 <a 
                                   key={idx}
                                   href={source.url}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="group inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100 border border-emerald-200 text-[11px] text-emerald-700 rounded-lg transition-all hover:shadow-sm"
+                                  className="group flex items-center gap-3 p-2.5 bg-white rounded-xl border border-stone-100 hover:border-emerald-300 hover:shadow-md transition-all"
                                 >
-                                  <div className="w-4 h-4 rounded bg-emerald-500 flex items-center justify-center flex-shrink-0">
-                                    <span className="text-[9px] font-bold text-white">{idx + 1}</span>
+                                  {/* Favicon */}
+                                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                                    <img 
+                                      src={`https://www.google.com/s2/favicons?domain=${hostname}&sz=32`}
+                                      alt=""
+                                      className="w-4 h-4"
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).style.display = 'none';
+                                      }}
+                                    />
+                                    <span className="text-[10px] font-bold text-emerald-600 absolute">{idx + 1}</span>
                                   </div>
-                                  <span className="truncate max-w-[140px] font-medium">{source.title || new URL(source.url).hostname}</span>
-                                  <svg className="w-3 h-3 text-emerald-400 group-hover:text-emerald-600 flex-shrink-0 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  
+                                  {/* Content */}
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-[12px] font-medium text-stone-800 truncate group-hover:text-emerald-700 transition-colors">
+                                      {source.title || hostname}
+                                    </p>
+                                    <p className="text-[10px] text-stone-400 truncate">
+                                      {hostname}
+                                    </p>
+                                  </div>
+                                  
+                                  {/* Arrow */}
+                                  <svg className="w-4 h-4 text-stone-300 group-hover:text-emerald-500 flex-shrink-0 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                   </svg>
                                 </a>
-                              ))}
-                            </div>
+                              );
+                            })}
                           </div>
-                        )}
-                      </div>
+                          
+                          {/* Show more indicator */}
+                          {msg.searchStatus.sources.length > 6 && (
+                            <p className="text-[10px] text-stone-400 text-center mt-2">
+                              +{msg.searchStatus.sources.length - 6} more sources
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -1184,24 +1254,20 @@ function ChatTab({
                     ) : msg.isStreaming ? (
                       <div className="flex items-center gap-2">
                         {msg.searchStatus?.searching ? (
-                          <div className="flex items-center gap-2">
-                            <div className="relative w-5 h-5 rounded-full bg-gradient-to-br from-sky-400 to-indigo-500">
-                              <svg className="w-full h-full text-white/70 p-0.5" viewBox="0 0 24 24" fill="none">
-                                <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5"/>
-                                <ellipse cx="12" cy="12" rx="9" ry="3.5" stroke="currentColor" strokeWidth="1.5"/>
-                                <g style={{ animation: 'spin 3s linear infinite', transformOrigin: 'center' }}>
-                                  <ellipse cx="12" cy="12" rx="3.5" ry="9" stroke="currentColor" strokeWidth="1.5"/>
-                                </g>
-                              </svg>
-                              <div className="absolute inset-0 rounded-full bg-white/20 animate-pulse" />
-                            </div>
-                            <span className="text-[13px] text-stone-500">Searching the web</span>
+                          <div className="flex items-center gap-2 text-sky-600">
+                            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                            <span className="text-[13px]">Searching web...</span>
                           </div>
                         ) : (
-                          <div className="flex gap-1">
-                            <div className="w-2 h-2 bg-stone-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                            <div className="w-2 h-2 bg-stone-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                            <div className="w-2 h-2 bg-stone-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                          <div className="flex gap-1.5 items-center">
+                            <div className="flex gap-1">
+                              <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                              <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                              <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -1329,14 +1395,14 @@ function ChatTab({
 
           {/* Input box */}
           <div className="relative">
-            <div className="flex items-end gap-2 bg-white border border-stone-200 rounded-2xl pl-3 pr-2 py-2 focus-within:border-indigo-300 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all shadow-sm">
+            <div className="flex items-end gap-2 bg-white border border-stone-200 rounded-2xl px-3 py-2 focus-within:border-stone-300 focus-within:shadow-sm transition-all">
               {/* Context button */}
               <button
                 onClick={() => setShowContextPanel(true)}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-all ${
+                className={`flex-shrink-0 flex items-center gap-1 p-1.5 rounded-lg transition-all ${
                   attachedMessages.length > 0
-                    ? 'bg-indigo-100 text-indigo-600'
-                    : 'text-stone-400 hover:text-stone-600 hover:bg-stone-100'
+                    ? 'bg-indigo-50 text-indigo-600'
+                    : 'text-stone-300 hover:text-stone-500 hover:bg-stone-50'
                 }`}
                 title="Add context from transcript"
               >
@@ -1344,42 +1410,33 @@ function ChatTab({
                   <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
                 </svg>
                 {attachedMessages.length > 0 && (
-                  <span className="text-[11px] font-semibold">{attachedMessages.length}</span>
+                  <span className="text-[10px] font-semibold">{attachedMessages.length}</span>
                 )}
               </button>
 
-              {/* Web Search toggle */}
+              {/* Web Search toggle - Clean switch style */}
               <button
                 onClick={() => !isWebSearchDisabled && setSettings(s => ({ ...s, webSearch: !s.webSearch }))}
                 disabled={isWebSearchDisabled}
-                className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${
+                className={`flex-shrink-0 flex items-center gap-1.5 p-1.5 rounded-lg transition-all ${
                   isWebSearchDisabled
-                    ? 'opacity-50 cursor-not-allowed text-stone-300 border border-stone-200 bg-stone-50'
+                    ? 'opacity-40 cursor-not-allowed text-stone-300'
                     : settings.webSearch
-                      ? 'bg-gradient-to-r from-sky-500 to-cyan-500 text-white shadow-md shadow-sky-500/25'
-                      : 'text-stone-400 hover:text-stone-600 hover:bg-stone-100 border border-stone-200'
+                      ? 'text-sky-600 bg-sky-50'
+                      : 'text-stone-300 hover:text-stone-500 hover:bg-stone-50'
                 }`}
                 title={isWebSearchDisabled 
-                  ? 'Web search is not available with Minimal reasoning effort' 
+                  ? 'Web search unavailable with Light reasoning' 
                   : settings.webSearch 
-                    ? 'Web search enabled' 
-                    : 'Web search disabled'
+                    ? 'Web search on' 
+                    : 'Web search off'
                 }
               >
-                <div className={`relative w-4 h-4 ${settings.webSearch && !isWebSearchDisabled ? 'animate-pulse' : ''}`} style={{ animationDuration: '3s' }}>
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={settings.webSearch && !isWebSearchDisabled ? 2.5 : 2}>
-                    <circle cx="12" cy="12" r="9" />
-                    <ellipse cx="12" cy="12" rx="9" ry="4" />
-                    <ellipse cx="12" cy="12" rx="4" ry="9" />
-                  </svg>
-                </div>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />
+                </svg>
                 {settings.webSearch && !isWebSearchDisabled && (
-                  <span className="text-[10px] font-bold uppercase tracking-wide">Web</span>
-                )}
-                {isWebSearchDisabled && (
-                  <svg className="w-3 h-3 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                  </svg>
+                  <span className="text-[9px] font-bold uppercase tracking-wider">Web</span>
                 )}
               </button>
 
@@ -1389,10 +1446,10 @@ function ChatTab({
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={attachedMessages.length > 0 ? "Add a question, or just send to analyze..." : "Message GPT-5..."}
+                placeholder={attachedMessages.length > 0 ? "Add a question, or just send to analyze..." : `Message ${MODEL_CONFIG[settings.model].name}...`}
                 rows={1}
                 disabled={isLoading}
-                className="flex-1 bg-transparent text-[15px] text-stone-700 placeholder:text-stone-400 resize-none focus:outline-none min-h-[28px] max-h-[200px] py-1 disabled:opacity-50"
+                className="flex-1 bg-transparent text-[14px] text-stone-700 placeholder:text-stone-400 resize-none focus:outline-none min-h-[24px] max-h-[200px] py-1 disabled:opacity-50"
                 onInput={(e) => {
                   const target = e.target as HTMLTextAreaElement;
                   target.style.height = 'auto';
@@ -1404,65 +1461,54 @@ function ChatTab({
               <button
                 onClick={handleSend}
                 disabled={(!inputValue.trim() && attachedMessages.length === 0) || isLoading}
-                className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
+                className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
                   (inputValue.trim() || attachedMessages.length > 0) && !isLoading
-                    ? `bg-gradient-to-r ${MODEL_CONFIG[settings.model].color} text-white shadow-lg`
-                    : 'bg-stone-100 text-stone-400 cursor-not-allowed'
+                    ? 'bg-stone-800 text-white hover:bg-stone-900'
+                    : 'bg-stone-100 text-stone-300 cursor-not-allowed'
                 }`}
               >
                 {isLoading ? (
-                  <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
                 ) : (
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18" />
                   </svg>
                 )}
               </button>
             </div>
 
-            {/* Helper text */}
-            <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
-              <span className="text-[10px] text-stone-400">
+            {/* Minimal helper text */}
+            <div className="flex items-center justify-center gap-2 mt-1.5">
+              <span className="text-[10px] text-stone-300 flex items-center gap-1.5">
+                <span className={`w-1 h-1 rounded-full ${MODEL_CONFIG[settings.model].badge}`} />
                 {MODEL_CONFIG[settings.model].name}
+                <span className="text-stone-200">·</span>
+                {REASONING_CONFIG[settings.reasoningEffort].name}
+                {settings.webSearch && (
+                  <>
+                    <span className="text-stone-200">·</span>
+                    <span className="text-sky-400">Web</span>
+                  </>
+                )}
               </span>
-              <span className="text-[10px] text-stone-300">•</span>
-              <span className="text-[10px] text-stone-400">
-                {REASONING_CONFIG[settings.reasoningEffort].icon} {REASONING_CONFIG[settings.reasoningEffort].name}
-              </span>
-              {settings.webSearch && (
-                <>
-                  <span className="text-[10px] text-stone-300">•</span>
-                  <span className="text-[10px] text-sky-500 flex items-center gap-1">
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                    </svg>
-                    Web
-                  </span>
-                </>
-              )}
               {systemPrompts[settings.model] !== DEFAULT_SYSTEM_PROMPTS[settings.model] && (
                 <>
-                  <span className="text-[10px] text-stone-300">•</span>
+                  <span className="text-stone-200">·</span>
                   <button 
                     onClick={() => {
                       setSelectedPromptModel(settings.model);
                       setEditingPrompt(systemPrompts[settings.model] || '');
                       setShowPromptEditor(true);
                     }}
-                    className="text-[10px] text-amber-500 hover:text-amber-600 flex items-center gap-1"
+                    className="text-[10px] text-amber-500 hover:text-amber-600"
                   >
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5" />
-                    </svg>
-                    Custom prompt
+                    Custom
                   </button>
                 </>
               )}
-              <span className="text-[10px] text-stone-300">•</span>
-              <span className="text-[10px] text-stone-400">Enter to send</span>
             </div>
           </div>
         </div>
@@ -1487,7 +1533,15 @@ function EvaluationTab({
   onSaveEvaluation?: (maude: string, chat: string, eval_: string) => void;
 }) {
   const [isEvaluating, setIsEvaluating] = useState(false);
-  const [evaluationResult, setEvaluationResult] = useState<string | null>(savedEvaluation?.evaluation || null);
+  const [evaluationResult, setEvaluationResult] = useState<string | null>(null);
+
+  // Sync local state with saved evaluation when it loads
+  useEffect(() => {
+    if (savedEvaluation?.evaluation && !evaluationResult) {
+      console.log('[Eval] Restoring saved evaluation');
+      setEvaluationResult(savedEvaluation.evaluation);
+    }
+  }, [savedEvaluation, evaluationResult]);
 
   // Get the final response from Maude (moderator) - last moderator message
   const maudeFinalResponse = useMemo(() => {
@@ -1706,6 +1760,10 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
   const router = useRouter();
   const searchParams = useSearchParams();
   
+  // Use a ref to track searchParams to avoid infinite loops in updateUrl
+  const searchParamsRef = useRef(searchParams);
+  searchParamsRef.current = searchParams;
+  
   // Read tab from URL, default to 'debate'
   const tabFromUrl = searchParams.get('tab') as ViewTab | null;
   const filterFromUrl = searchParams.get('filter') as ParticipantRole | 'all' | null;
@@ -1731,9 +1789,9 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
     clearEvaluation,
   } = useProjectEvaluation(projectId);
 
-  // Update URL when state changes
+  // Update URL when state changes (uses ref to avoid dependency on searchParams)
   const updateUrl = useCallback((params: { tab?: ViewTab; filter?: ParticipantRole | 'all'; q?: string }) => {
-    const newParams = new URLSearchParams(searchParams.toString());
+    const newParams = new URLSearchParams(searchParamsRef.current.toString());
     
     if (params.tab !== undefined) {
       if (params.tab === 'debate') {
@@ -1761,7 +1819,7 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
     
     const queryString = newParams.toString();
     router.push(queryString ? `?${queryString}` : '/', { scroll: false });
-  }, [router, searchParams]);
+  }, [router]);
 
   // Wrapped setters that also update URL
   const setActiveTab = useCallback((tab: ViewTab) => {
@@ -1920,10 +1978,10 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
               </button>
               <div>
                 <div className="flex items-center gap-2">
-                  <h1 className="text-[15px] font-semibold text-stone-800 leading-tight">{fileName}</h1>
+                  <h1 className="text-[15px] font-semibold text-stone-800 leading-tight">{projectName || fileName}</h1>
                   {projectName && (
-                    <span className="px-2 py-0.5 text-[10px] font-medium bg-indigo-100 text-indigo-600 rounded-full">
-                      {projectName}
+                    <span className="px-2 py-0.5 text-[10px] font-medium bg-stone-100 text-stone-500 rounded-full truncate max-w-[150px]" title={fileName}>
+                      {fileName}
                     </span>
                   )}
                 </div>
@@ -2018,18 +2076,20 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
         )}
       </header>
 
-      {/* Content */}
-      {activeTab === 'debate' && (
-        <main ref={scrollRef} className="flex-1 overflow-y-auto">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
-            {groupedMessages.map((group, gi) => (
-              <section key={gi}>
-                <div className="flex items-center gap-4 my-8 first:mt-0">
-                  <div className="h-px flex-1 bg-stone-200" />
-                  <time className="text-[12px] font-medium text-stone-400 tracking-wide uppercase">{group.date}</time>
-                  <div className="h-px flex-1 bg-stone-200" />
-                </div>
-                <div className="space-y-4">
+      {/* Content - All tabs rendered but hidden when inactive to preserve state */}
+      <main 
+        ref={scrollRef} 
+        className={`flex-1 overflow-y-auto ${activeTab !== 'debate' ? 'hidden' : ''}`}
+      >
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
+          {groupedMessages.map((group, gi) => (
+            <section key={gi}>
+              <div className="flex items-center gap-4 my-8 first:mt-0">
+                <div className="h-px flex-1 bg-stone-200" />
+                <time className="text-[12px] font-medium text-stone-400 tracking-wide uppercase">{group.date}</time>
+                <div className="h-px flex-1 bg-stone-200" />
+              </div>
+              <div className="space-y-4">
                   {group.messages.map((msg, mi) => (
                     <ChatMessage key={`${msg.timestamp}-${mi}`} message={msg} />
                   ))}
@@ -2055,10 +2115,9 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
             <div className="h-12" />
           </div>
         </main>
-      )}
 
-      {/* CHAT TAB - Context selection + Chat with OpenAI */}
-      {activeTab === 'chat' && (
+      {/* CHAT TAB - Always rendered, hidden when inactive to preserve streaming state */}
+      <div className={activeTab !== 'chat' ? 'hidden' : 'flex-1 flex flex-col'}>
         <ChatTab 
           messages={messages} 
           fileName={fileName} 
@@ -2067,10 +2126,10 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
           projectId={projectId}
           onClearChat={clearChat}
         />
-      )}
+      </div>
 
-      {/* EVALUATION TAB */}
-      {activeTab === 'evaluation' && (
+      {/* EVALUATION TAB - Always rendered, hidden when inactive to preserve streaming state */}
+      <div className={activeTab !== 'evaluation' ? 'hidden' : 'flex-1 flex flex-col'}>
         <EvaluationTab 
           messages={messages} 
           chatMessages={chatMessages} 
@@ -2078,7 +2137,7 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
           savedEvaluation={savedEvaluation}
           onSaveEvaluation={saveEvaluation}
         />
-      )}
+      </div>
 
       {/* Scroll to top - only on debate/evaluation tabs */}
       {showScrollTop && activeTab !== 'chat' && (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 // =============================================
@@ -407,7 +407,10 @@ export function useProjectChat(projectId?: string | null) {
   // Load or create chat session for project
   useEffect(() => {
     async function loadChat() {
+      console.log('[Chat] useProjectChat loading for projectId:', projectId);
+      
       if (!projectId) {
+        console.log('[Chat] No projectId provided');
         setMessages([]);
         setSessionId(null);
         setIsLoading(false);
@@ -420,13 +423,16 @@ export function useProjectChat(projectId?: string | null) {
         if (stored) {
           try {
             const data = JSON.parse(stored);
+            console.log('[Chat] Loaded', (data.messages || []).length, 'messages from localStorage for local project');
             setMessages(data.messages || []);
             setSessionId(data.sessionId || `local-session-${projectId}`);
           } catch {
+            console.log('[Chat] Failed to parse localStorage data');
             setMessages([]);
             setSessionId(`local-session-${projectId}`);
           }
         } else {
+          console.log('[Chat] No stored messages for local project');
           setMessages([]);
           setSessionId(`local-session-${projectId}`);
         }
@@ -455,6 +461,7 @@ export function useProjectChat(projectId?: string | null) {
 
         if (session) {
           setSessionId(session.id);
+          console.log('[Chat] Found existing session:', session.id);
           
           // Load messages for this session
           const { data: msgs, error: msgsError } = await supabase
@@ -464,10 +471,11 @@ export function useProjectChat(projectId?: string | null) {
             .order('created_at', { ascending: true });
 
           if (msgsError) {
-            console.error('Error loading messages:', msgsError);
+            console.error('[Chat] Error loading messages:', msgsError);
           }
 
-          if (msgs) {
+          if (msgs && msgs.length > 0) {
+            console.log('[Chat] Loaded', msgs.length, 'messages from Supabase');
             setMessages(msgs.map(m => ({
               id: m.id,
               role: m.role,
@@ -476,6 +484,8 @@ export function useProjectChat(projectId?: string | null) {
               searchStatus: m.search_status,
               citations: m.citations,
             })));
+          } else {
+            console.log('[Chat] No messages found for session');
           }
         } else {
           // Create new session
@@ -506,10 +516,23 @@ export function useProjectChat(projectId?: string | null) {
 
   // Save messages (debounced for streaming)
   const saveMessages = useCallback(async (newMessages: ChatMessageData[]) => {
-    if (!projectId || !sessionId) return;
+    if (!projectId) {
+      console.log('[Chat] No projectId, skipping save');
+      return;
+    }
+    if (!sessionId) {
+      console.log('[Chat] No sessionId yet, skipping save (will retry when session is ready)');
+      return;
+    }
 
     // Filter out streaming messages
     const completedMessages = newMessages.filter(m => !m.isStreaming);
+    
+    if (completedMessages.length === 0) {
+      return;
+    }
+
+    console.log('[Chat] Saving', completedMessages.length, 'messages to', projectId.startsWith('local-') ? 'localStorage' : 'Supabase');
 
     // Handle local projects
     if (projectId.startsWith('local-') || !isSupabaseConfigured) {
@@ -517,16 +540,21 @@ export function useProjectChat(projectId?: string | null) {
         sessionId,
         messages: completedMessages,
       }));
+      console.log('[Chat] Saved to localStorage');
       return;
     }
 
     // Save to Supabase
     for (const msg of completedMessages) {
       try {
-        await supabase
+        // Check if this ID looks like a UUID or a timestamp
+        const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(msg.id);
+        
+        const { error } = await supabase
           .from('chat_messages')
           .upsert({
-            id: msg.id,
+            // Let Supabase generate UUID if the ID is not a valid UUID
+            id: isValidUUID ? msg.id : undefined,
             session_id: sessionId,
             role: msg.role,
             content: msg.content,
@@ -534,8 +562,14 @@ export function useProjectChat(projectId?: string | null) {
             search_status: msg.searchStatus,
             citations: msg.citations,
           });
+        
+        if (error) {
+          console.error('[Chat] Error saving message:', error.message, error.details);
+        } else {
+          console.log('[Chat] Saved message', msg.id, 'role:', msg.role);
+        }
       } catch (err) {
-        console.error('Error saving message:', err);
+        console.error('[Chat] Exception saving message:', err);
       }
     }
 
@@ -546,6 +580,18 @@ export function useProjectChat(projectId?: string | null) {
       .eq('id', sessionId);
   }, [projectId, sessionId]);
 
+  // Track pending save for when session becomes ready
+  const pendingMessagesRef = useRef<ChatMessageData[] | null>(null);
+  
+  // Effect to save pending messages when sessionId becomes available
+  useEffect(() => {
+    if (sessionId && pendingMessagesRef.current) {
+      console.log('[Chat] Session ready, saving pending messages');
+      saveMessages(pendingMessagesRef.current);
+      pendingMessagesRef.current = null;
+    }
+  }, [sessionId, saveMessages]);
+
   // Update messages and save
   const updateMessages = useCallback((updater: ChatMessageData[] | ((prev: ChatMessageData[]) => ChatMessageData[])) => {
     setMessages(prev => {
@@ -553,11 +599,17 @@ export function useProjectChat(projectId?: string | null) {
       // Save after update (only completed messages)
       const hasCompleted = newMessages.some(m => !m.isStreaming);
       if (hasCompleted) {
-        saveMessages(newMessages);
+        if (!sessionId) {
+          // Store for later when session is ready
+          console.log('[Chat] Queuing messages for save (session not ready)');
+          pendingMessagesRef.current = newMessages;
+        } else {
+          saveMessages(newMessages);
+        }
       }
       return newMessages;
     });
-  }, [saveMessages]);
+  }, [saveMessages, sessionId]);
 
   // Clear chat
   const clearChat = useCallback(async () => {
@@ -605,7 +657,10 @@ export function useProjectEvaluation(projectId?: string | null) {
   // Load evaluation for project
   useEffect(() => {
     async function load() {
+      console.log('[Eval] Loading evaluation for project:', projectId);
+      
       if (!projectId) {
+        console.log('[Eval] No projectId, skipping load');
         setEvaluation(null);
         setIsLoading(false);
         return;
@@ -614,6 +669,7 @@ export function useProjectEvaluation(projectId?: string | null) {
       // Handle local projects
       if (projectId.startsWith('local-')) {
         const stored = localStorage.getItem(`evaluation-${projectId}`);
+        console.log('[Eval] Local project, localStorage data:', stored ? 'found' : 'not found');
         if (stored) {
           try {
             setEvaluation(JSON.parse(stored));
@@ -628,6 +684,7 @@ export function useProjectEvaluation(projectId?: string | null) {
       // For now, just use localStorage for evaluations
       // Can add Supabase table later if needed
       const stored = localStorage.getItem(`evaluation-${projectId}`);
+      console.log('[Eval] Supabase project, localStorage key:', `evaluation-${projectId}`, 'data:', stored ? 'found' : 'not found');
       if (stored) {
         try {
           setEvaluation(JSON.parse(stored));
@@ -644,7 +701,11 @@ export function useProjectEvaluation(projectId?: string | null) {
 
   // Save evaluation
   const saveEvaluation = useCallback((maudeResponse: string, chatResponse: string, evaluationText: string) => {
-    if (!projectId) return;
+    console.log('[Eval] saveEvaluation called, projectId:', projectId);
+    if (!projectId) {
+      console.log('[Eval] No projectId, skipping save');
+      return;
+    }
 
     const data: EvaluationResult = {
       id: `eval-${Date.now()}`,
@@ -655,8 +716,11 @@ export function useProjectEvaluation(projectId?: string | null) {
       created_at: new Date().toISOString(),
     };
 
-    localStorage.setItem(`evaluation-${projectId}`, JSON.stringify(data));
+    const key = `evaluation-${projectId}`;
+    console.log('[Eval] Saving to localStorage key:', key);
+    localStorage.setItem(key, JSON.stringify(data));
     setEvaluation(data);
+    console.log('[Eval] Saved successfully');
   }, [projectId]);
 
   // Clear evaluation
