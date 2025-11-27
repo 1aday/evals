@@ -71,9 +71,9 @@ export function useProjects() {
             setCurrentProject(lastProject);
           }
         }
-      } catch (err) {
-        // Ignore - no last project
-      }
+    } catch {
+      // Ignore - no last project
+    }
     }
 
     loadLastProject();
@@ -569,15 +569,30 @@ export function useProjectChat(projectId?: string | null) {
           console.log('[Chat] Saved message', msg.id, 'role:', msg.role);
         }
       } catch (err) {
+        // Handle network errors gracefully - don't break the app
+        if (err instanceof TypeError && (err as Error).message === 'Failed to fetch') {
+          console.warn('[Chat] Network error saving message - Supabase may be unreachable. Messages will be saved locally.');
+          // Fallback to localStorage on network error
+          localStorage.setItem(`chat-${projectId}`, JSON.stringify({
+            sessionId,
+            messages: completedMessages,
+          }));
+          return; // Exit early, don't retry other messages
+        }
         console.error('[Chat] Exception saving message:', err);
       }
     }
 
     // Update session timestamp
-    await supabase
-      .from('chat_sessions')
-      .update({ updated_at: new Date().toISOString() })
-      .eq('id', sessionId);
+    try {
+      await supabase
+        .from('chat_sessions')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', sessionId);
+    } catch {
+      // Silently ignore timestamp update errors
+      console.warn('[Chat] Could not update session timestamp');
+    }
   }, [projectId, sessionId]);
 
   // Track pending save for when session becomes ready
@@ -654,15 +669,19 @@ export function useProjectEvaluation(projectId?: string | null) {
   const [evaluation, setEvaluation] = useState<EvaluationResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load evaluation for project
+  // Load evaluation for project - using callback to avoid direct setState in effect
   useEffect(() => {
-    async function load() {
+    let isMounted = true;
+    
+    const load = () => {
       console.log('[Eval] Loading evaluation for project:', projectId);
       
       if (!projectId) {
         console.log('[Eval] No projectId, skipping load');
-        setEvaluation(null);
-        setIsLoading(false);
+        if (isMounted) {
+          setEvaluation(null);
+          setIsLoading(false);
+        }
         return;
       }
 
@@ -670,14 +689,18 @@ export function useProjectEvaluation(projectId?: string | null) {
       if (projectId.startsWith('local-')) {
         const stored = localStorage.getItem(`evaluation-${projectId}`);
         console.log('[Eval] Local project, localStorage data:', stored ? 'found' : 'not found');
-        if (stored) {
-          try {
-            setEvaluation(JSON.parse(stored));
-          } catch {
+        if (isMounted) {
+          if (stored) {
+            try {
+              setEvaluation(JSON.parse(stored));
+            } catch {
+              setEvaluation(null);
+            }
+          } else {
             setEvaluation(null);
           }
+          setIsLoading(false);
         }
-        setIsLoading(false);
         return;
       }
 
@@ -685,18 +708,27 @@ export function useProjectEvaluation(projectId?: string | null) {
       // Can add Supabase table later if needed
       const stored = localStorage.getItem(`evaluation-${projectId}`);
       console.log('[Eval] Supabase project, localStorage key:', `evaluation-${projectId}`, 'data:', stored ? 'found' : 'not found');
-      if (stored) {
-        try {
-          setEvaluation(JSON.parse(stored));
-        } catch {
+      if (isMounted) {
+        if (stored) {
+          try {
+            setEvaluation(JSON.parse(stored));
+          } catch {
+            setEvaluation(null);
+          }
+        } else {
           setEvaluation(null);
         }
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    }
+    };
 
-    setIsLoading(true);
-    load();
+    // Use requestAnimationFrame to avoid synchronous setState warning
+    const frameId = requestAnimationFrame(load);
+    
+    return () => {
+      isMounted = false;
+      cancelAnimationFrame(frameId);
+    };
   }, [projectId]);
 
   // Save evaluation

@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import OpenAI from 'openai';
+import type { Responses } from 'openai/resources/responses/responses';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -8,13 +9,6 @@ const openai = new OpenAI({
 export async function POST(req: NextRequest) {
   try {
     const { messages, settings, context, systemPrompt } = await req.json();
-
-    // Build input array for Responses API
-    type ContentItem = { type: 'input_text' | 'output_text'; text: string };
-    type InputItem = {
-      role: 'user' | 'assistant';
-      content: ContentItem[];
-    };
 
     // If context is provided, prepend it to the first user message
     const inputMessages = [...messages];
@@ -30,38 +24,32 @@ export async function POST(req: NextRequest) {
       }
     }
     
-    const input: InputItem[] = inputMessages.map((m: { role: string; content: string }) => ({
-      role: m.role as 'user' | 'assistant',
-      content: [{ 
-        type: (m.role === 'assistant' ? 'output_text' : 'input_text') as 'input_text' | 'output_text', 
-        text: m.content 
-      }],
+    // Build input array for Responses API using EasyInputMessage format (simpler)
+    const input: Responses.EasyInputMessage[] = inputMessages.map((m: { role: string; content: string }) => ({
+      role: m.role as 'user' | 'assistant' | 'system',
+      content: m.content,
     }));
 
-    // Reasoning effort - 'none' only works for gpt-5.1, others use 'minimal'
+    // Reasoning effort - 'none' only works for gpt-5.1
     let reasoningEffort = settings.reasoningEffort;
     if (reasoningEffort === 'none' && settings.model !== 'gpt-5.1') {
       reasoningEffort = 'minimal';
     }
 
     // Build tools array
-    const tools: any[] = [];
+    const tools: Responses.Tool[] = [];
     if (settings.webSearch) {
-      tools.push({
-        type: 'web_search',
-        // web_search tool config
-      });
+      tools.push({ type: 'web_search' });
     }
 
     // Create streaming response using Responses API
-    const stream = await (openai as any).responses.create({
-      model: settings.model || 'gpt-5',
+    const stream = await openai.responses.create({
+      model: settings.model || 'gpt-5.1',
       instructions: systemPrompt || undefined,
       input,
       stream: true,
       text: {
         format: { type: 'text' },
-        verbosity: settings.verbosity || 'medium',
       },
       reasoning: {
         effort: reasoningEffort || 'medium',
@@ -145,21 +133,41 @@ export async function POST(req: NextRequest) {
             }
             // Web search completed with results
             else if (event.type === 'response.web_search_call.completed') {
+              // Try multiple paths to find sources based on OpenAI's API structure
+              const eventRecord = event as unknown as Record<string, unknown>;
+              const item = eventRecord.item as Record<string, unknown> | undefined;
+              const output = eventRecord.output as Record<string, unknown> | undefined;
+              const action = eventRecord.action as Record<string, unknown> | undefined;
+              const data = eventRecord.data as Record<string, unknown> | undefined;
+              const sources = 
+                (item?.action as Record<string, unknown>)?.sources || 
+                (output?.action as Record<string, unknown>)?.sources ||
+                action?.sources ||
+                eventRecord.sources ||
+                data?.sources ||
+                (data?.action as Record<string, unknown>)?.sources ||
+                [];
+              
+              console.log('Web search completed event:', JSON.stringify(event, null, 2));
+              
+              // Always send search_completed to update UI state, even if sources are empty
+              // Sources might come later in response.completed event
               safeEnqueue(
                 encoder.encode(`data: ${JSON.stringify({ 
                   type: 'search_completed',
-                  id: event.item_id,
-                  action: event.item?.action
+                  id: eventRecord.item_id,
+                  sources: sources
                 })}\n\n`)
               );
             }
             // URL citation annotation
             else if (event.type === 'response.output_text.annotation.added') {
-              if (event.annotation?.type === 'url_citation') {
+              const annotationEvent = event as unknown as { annotation?: { type: string; url_citation?: unknown } };
+              if (annotationEvent.annotation?.type === 'url_citation') {
                 safeEnqueue(
                   encoder.encode(`data: ${JSON.stringify({ 
                     type: 'citation',
-                    citation: event.annotation.url_citation
+                    citation: annotationEvent.annotation.url_citation
                   })}\n\n`)
                 );
               }
@@ -171,11 +179,32 @@ export async function POST(req: NextRequest) {
               );
             }
             // Response completed
-            else if (event.type === 'response.completed' || event.type === 'response.done') {
+            else if (event.type === 'response.completed') {
+              // Try to extract sources from the response output items
+              const responseEvent = event as unknown as { response?: { output?: Array<{ type: string; action?: { sources?: { url: string; title: string }[] } }>; usage?: unknown } };
+              const outputItems = responseEvent.response?.output || [];
+              let sources: { url: string; title: string }[] = [];
+              for (const item of outputItems) {
+                if (item.type === 'web_search_call' && item.action?.sources) {
+                  sources = item.action.sources;
+                  break;
+                }
+              }
+              
+              // Send sources if found (in case they weren't sent with web_search_call.completed)
+              if (sources.length > 0) {
+                safeEnqueue(
+                  encoder.encode(`data: ${JSON.stringify({ 
+                    type: 'search_completed',
+                    sources: sources
+                  })}\n\n`)
+                );
+              }
+              
               safeEnqueue(
                 encoder.encode(`data: ${JSON.stringify({ 
                   type: 'done',
-                  usage: event.response?.usage 
+                  usage: responseEvent.response?.usage 
                 })}\n\n`)
               );
               safeClose();
@@ -183,10 +212,11 @@ export async function POST(req: NextRequest) {
             }
             // Error
             else if (event.type === 'error') {
+              const errorEvent = event as unknown as { error?: { message?: string } };
               safeEnqueue(
                 encoder.encode(`data: ${JSON.stringify({ 
                   type: 'error', 
-                  error: event.error?.message || 'Unknown error' 
+                  error: errorEvent.error?.message || 'Unknown error' 
                 })}\n\n`)
               );
               safeClose();

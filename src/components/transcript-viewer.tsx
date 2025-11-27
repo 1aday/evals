@@ -133,53 +133,33 @@ interface ChatSettings {
   webSearch: boolean;
 }
 
-interface Citation {
-  url: string;
-  title: string;
-  start_index: number;
-  end_index: number;
-}
-
-interface SearchStatus {
-  searching: boolean;
-  completed: boolean;
-  sources?: { url: string; title: string }[];
-}
+// Citation and SearchStatus types are used by ChatMessageData from use-supabase
 
 // Model config
 const MODEL_CONFIG = {
+  'gpt-5.1': { 
+    name: 'GPT-5.1', 
+    desc: 'Most advanced', 
+    color: 'from-violet-500 to-purple-600',
+    badge: 'bg-violet-500',
+  },
   'gpt-5': { 
     name: 'GPT-5', 
-    desc: 'Most capable', 
+    desc: 'Highly capable', 
     color: 'from-indigo-500 to-blue-600',
     badge: 'bg-indigo-500',
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
-      </svg>
-    ),
   },
   'gpt-5-mini': { 
     name: 'Mini', 
     desc: 'Balanced', 
     color: 'from-cyan-500 to-teal-600',
     badge: 'bg-cyan-500',
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-      </svg>
-    ),
   },
   'gpt-5-nano': { 
     name: 'Nano', 
     desc: 'Fast', 
     color: 'from-emerald-500 to-green-600',
     badge: 'bg-emerald-500',
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
   },
 } as const;
 
@@ -217,37 +197,11 @@ Guidelines:
 };
 
 const REASONING_CONFIG = {
-  'none': { 
-    name: 'Off', 
-    desc: 'Fastest responses, no reasoning', 
-    level: 0,
-  },
-  'minimal': { 
-    name: 'Light', 
-    desc: 'Quick thinking, minimal analysis', 
-    level: 1,
-  },
-  'low': { 
-    name: 'Basic', 
-    desc: 'Some reasoning applied', 
-    level: 2,
-  },
-  'medium': { 
-    name: 'Balanced', 
-    desc: 'Good balance of speed and depth', 
-    level: 3,
-  },
-  'high': { 
-    name: 'Deep', 
-    desc: 'Thorough analysis and reasoning', 
-    level: 4,
-  },
-} as const;
-
-const VERBOSITY_CONFIG = {
-  'low': { name: 'Concise', desc: 'Brief, to the point' },
-  'medium': { name: 'Balanced', desc: 'Standard detail level' },
-  'high': { name: 'Detailed', desc: 'Comprehensive responses' },
+  'none': { name: 'None', desc: 'Fastest responses', icon: '⚡' },
+  'minimal': { name: 'Minimal', desc: 'Light thinking', icon: '💭' },
+  'low': { name: 'Low', desc: 'Some reasoning', icon: '🧠' },
+  'medium': { name: 'Medium', desc: 'Balanced', icon: '🎯' },
+  'high': { name: 'High', desc: 'Deep analysis', icon: '🔬' },
 } as const;
 
 // Chat Tab Component
@@ -272,13 +226,19 @@ function ChatTab({
   const [showPromptEditor, setShowPromptEditor] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Edit message state
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isUserScrolledUp, setIsUserScrolledUp] = useState(false);
+  const userScrolledRef = useRef(false); // Tracks manual user scroll, not reset by content updates
+  const lastScrollTopRef = useRef(0); // Track scroll position to detect user scroll direction
   
   const [settings, setSettings] = useState<ChatSettings>({
-    model: 'gpt-5',
+    model: 'gpt-5.1',
     reasoningEffort: 'medium',
     verbosity: 'medium',
     webSearch: true,
@@ -294,7 +254,7 @@ function ChatTab({
   } = useSystemPrompts(DEFAULT_SYSTEM_PROMPTS, projectId);
   
   const [editingPrompt, setEditingPrompt] = useState<string>('');
-  const [selectedPromptModel, setSelectedPromptModel] = useState<string>('gpt-5');
+  const [selectedPromptModel, setSelectedPromptModel] = useState<string>('gpt-5.1');
 
   // Get current system prompt for active model
   const currentSystemPrompt = systemPrompts[settings.model] || DEFAULT_SYSTEM_PROMPTS[settings.model] || '';
@@ -349,20 +309,42 @@ function ChatTab({
     
     const { scrollTop, scrollHeight, clientHeight } = container;
     const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    const isAtBottom = distanceFromBottom <= 100;
     
-    // User is "at bottom" if within 100px of the bottom
-    setIsUserScrolledUp(distanceFromBottom > 100);
+    // Detect if user manually scrolled UP (scrollTop decreased or they're not at bottom)
+    if (scrollTop < lastScrollTopRef.current - 10) {
+      // User scrolled up - mark as manually scrolled
+      userScrolledRef.current = true;
+    } else if (isAtBottom) {
+      // User scrolled back to bottom - reset the manual scroll flag
+      userScrolledRef.current = false;
+    }
+    
+    lastScrollTopRef.current = scrollTop;
+    setIsUserScrolledUp(!isAtBottom);
   }, []);
 
-  // Auto-scroll to bottom when new messages arrive, only if user hasn't scrolled up
+  // Auto-scroll to bottom when new messages arrive, only if user hasn't manually scrolled up
+  const isStreaming = chatMessages.some(m => m.isStreaming);
   useEffect(() => {
-    if (!isUserScrolledUp) {
+    // Don't auto-scroll if user has manually scrolled up
+    if (userScrolledRef.current) return;
+    
+    const container = chatContainerRef.current;
+    if (!container) return;
+    
+    // During streaming, scroll immediately (no animation) to prevent fighting with user
+    // After streaming, use smooth scroll for new messages
+    if (isStreaming) {
+      container.scrollTop = container.scrollHeight;
+    } else if (!isUserScrolledUp) {
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [chatMessages, isUserScrolledUp]);
+  }, [chatMessages, isUserScrolledUp, isStreaming]);
 
   // Scroll to bottom when user sends a new message (reset scroll behavior)
   const scrollToBottom = useCallback(() => {
+    userScrolledRef.current = false; // Reset manual scroll tracking
     setIsUserScrolledUp(false);
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
@@ -472,7 +454,8 @@ function ChatTab({
                     : m
                 ));
               } else if (data.type === 'search_completed') {
-                const sources = data.action?.sources || [];
+                // Sources are now sent directly at the top level from the API
+                const sources = data.sources || data.action?.sources || [];
                 setChatMessages(prev => prev.map(m => 
                   m.id === assistantId 
                     ? { ...m, searchStatus: { searching: false, completed: true, sources } }
@@ -496,7 +479,7 @@ function ChatTab({
               } else if (data.type === 'error') {
                 throw new Error(data.error);
               }
-            } catch (e) {
+            } catch {
               // Skip invalid JSON
             }
           }
@@ -532,15 +515,169 @@ function ChatTab({
     onClearChat?.();
   };
 
+  // Start editing a message
+  const startEditMessage = (msg: ChatMessage) => {
+    setEditingMessageId(msg.id);
+    setEditingContent(msg.content);
+  };
+
+  // Cancel editing
+  const cancelEditMessage = () => {
+    setEditingMessageId(null);
+    setEditingContent('');
+  };
+
+  // Save edit and re-run from that point
+  const saveEditAndRerun = async () => {
+    if (!editingMessageId || !editingContent.trim()) return;
+
+    // Find the index of the message being edited
+    const editIndex = chatMessages.findIndex(m => m.id === editingMessageId);
+    if (editIndex === -1) return;
+
+    // Keep only messages before this one, plus the edited message
+    const messagesToKeep = chatMessages.slice(0, editIndex);
+    const editedMessage: ChatMessage = {
+      ...chatMessages[editIndex],
+      content: editingContent.trim(),
+    };
+
+    // Update state
+    setChatMessages([...messagesToKeep, editedMessage]);
+    setEditingMessageId(null);
+    setEditingContent('');
+    setIsLoading(true);
+    scrollToBottom();
+
+    // Generate new assistant response
+    const assistantId = crypto.randomUUID();
+    setChatMessages(prev => [...prev, {
+      id: assistantId,
+      role: 'assistant',
+      content: '',
+      isStreaming: true,
+    }]);
+
+    try {
+      const context = attachedMessages.map(idx => messages[idx].content);
+
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [...messagesToKeep, editedMessage].map(m => ({
+            role: m.role,
+            content: m.content,
+          })),
+          settings,
+          context,
+          systemPrompt: currentSystemPrompt,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.details || errorData.error || 'Failed to send message');
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) throw new Error('No reader available');
+
+      let fullContent = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              
+              if (data.type === 'content') {
+                fullContent += data.content;
+                setChatMessages(prev => prev.map(m => 
+                  m.id === assistantId 
+                    ? { ...m, content: fullContent }
+                    : m
+                ));
+              } else if (data.type === 'thinking') {
+                setChatMessages(prev => prev.map(m => 
+                  m.id === assistantId 
+                    ? { ...m, thinking: (m.thinking || '') + data.content }
+                    : m
+                ));
+              } else if (data.type === 'search_started' || data.type === 'search_searching') {
+                setChatMessages(prev => prev.map(m => 
+                  m.id === assistantId 
+                    ? { ...m, searchStatus: { searching: true, completed: false } }
+                    : m
+                ));
+              } else if (data.type === 'search_completed') {
+                const sources = data.sources || data.action?.sources || [];
+                setChatMessages(prev => prev.map(m => 
+                  m.id === assistantId 
+                    ? { ...m, searchStatus: { searching: false, completed: true, sources } }
+                    : m
+                ));
+              } else if (data.type === 'citation') {
+                setChatMessages(prev => prev.map(m => 
+                  m.id === assistantId 
+                    ? { ...m, citations: [...(m.citations || []), data.citation] }
+                    : m
+                ));
+              } else if (data.type === 'done') {
+                setChatMessages(prev => prev.map(m => 
+                  m.id === assistantId 
+                    ? { ...m, isStreaming: false }
+                    : m
+                ));
+              } else if (data.type === 'error') {
+                throw new Error(data.error);
+              }
+            } catch {
+              // Skip invalid JSON
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Chat error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setChatMessages(prev => prev.map(m => 
+        m.id === assistantId 
+          ? { ...m, content: `⚠️ Error: ${errorMessage}`, isStreaming: false }
+          : m
+      ));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Delete a message and all subsequent messages
+  const deleteMessageAndAfter = (messageId: string) => {
+    const deleteIndex = chatMessages.findIndex(m => m.id === messageId);
+    if (deleteIndex === -1) return;
+    
+    // Keep only messages before this one
+    setChatMessages(chatMessages.slice(0, deleteIndex));
+  };
+
   return (
     <div className="flex-1 flex flex-col bg-white">
-      {/* Compact header bar */}
-      <div className="flex-shrink-0 border-b border-stone-100 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-2.5">
-          <div className="flex items-center justify-between gap-3">
-            {/* Left: Model selector pill */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center bg-stone-100/80 rounded-full p-0.5">
+      {/* Header with settings */}
+      <div className="flex-shrink-0 border-b border-stone-100 bg-white">
+        <div className="max-w-4xl mx-auto px-4 py-3">
+          <div className="flex items-center justify-between gap-4">
+            {/* Model selector - subtle dropdown style */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] text-stone-400">Model:</span>
+              <div className="flex items-center bg-stone-50 border border-stone-200 rounded-lg p-0.5">
                 {(Object.keys(MODEL_CONFIG) as Array<keyof typeof MODEL_CONFIG>).map((model) => {
                   const config = MODEL_CONFIG[model];
                   const isActive = settings.model === model;
@@ -548,13 +685,12 @@ function ChatTab({
                     <button
                       key={model}
                       onClick={() => setSettings(s => ({ ...s, model }))}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium transition-all duration-200 ${
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
                         isActive 
-                          ? `bg-white text-stone-800 shadow-sm` 
-                          : 'text-stone-500 hover:text-stone-700'
+                          ? 'bg-white text-stone-800 shadow-sm' 
+                          : 'text-stone-400 hover:text-stone-600'
                       }`}
                     >
-                      {isActive && <span className={`w-1.5 h-1.5 rounded-full ${config.badge}`} />}
                       {config.name}
                     </button>
                   );
@@ -562,71 +698,61 @@ function ChatTab({
               </div>
             </div>
 
-            {/* Right: Action buttons */}
-            <div className="flex items-center gap-1.5">
+            {/* Right side controls */}
+            <div className="flex items-center gap-2">
               {chatMessages.length > 0 && (
                 <button
                   onClick={clearChatHandler}
-                  className="px-2.5 py-1.5 text-[11px] font-medium text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"
+                  className="px-3 py-1.5 text-[12px] text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                 >
                   Clear
                 </button>
               )}
-              
-              {/* Prompt editor button */}
               <button
                 onClick={() => {
                   setSelectedPromptModel(settings.model);
                   setEditingPrompt(systemPrompts[settings.model] || DEFAULT_SYSTEM_PROMPTS[settings.model] || '');
                   setShowPromptEditor(true);
                 }}
-                className={`relative flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all ${
                   systemPrompts[settings.model] !== DEFAULT_SYSTEM_PROMPTS[settings.model]
                     ? 'bg-amber-50 text-amber-600 hover:bg-amber-100' 
                     : 'text-stone-500 hover:text-stone-700 hover:bg-stone-100'
                 }`}
                 title="Edit system prompt"
               >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5" />
                 </svg>
+                Prompt
                 {systemPrompts[settings.model] !== DEFAULT_SYSTEM_PROMPTS[settings.model] && (
-                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                 )}
               </button>
-
-              {/* Settings toggle */}
               <button
                 onClick={() => setShowSettings(!showSettings)}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all ${
                   showSettings 
-                    ? 'bg-stone-800 text-white' 
+                    ? 'bg-indigo-100 text-indigo-600' 
                     : 'text-stone-500 hover:text-stone-700 hover:bg-stone-100'
                 }`}
               >
-                <svg className={`w-3.5 h-3.5 transition-transform duration-200 ${showSettings ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                 </svg>
+                Settings
               </button>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Settings Panel - Slide down */}
-      <div className={`overflow-hidden transition-all duration-300 ease-out ${showSettings ? 'max-h-[400px] opacity-100' : 'max-h-0 opacity-0'}`}>
-        <div className="border-b border-stone-100 bg-gradient-to-b from-stone-50/80 to-white">
-          <div className="max-w-4xl mx-auto px-4 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              
-              {/* Reasoning Effort - Slider style */}
-              <div className="md:col-span-2">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-[11px] font-semibold text-stone-500 uppercase tracking-wide">Reasoning</label>
-                  <span className="text-[11px] text-stone-400">{REASONING_CONFIG[settings.reasoningEffort].desc}</span>
-                </div>
-                <div className="relative">
-                  <div className="flex items-center bg-stone-100 rounded-xl p-1 gap-0.5">
+          {/* Expandable settings panel */}
+          {showSettings && (
+            <div className="mt-3 py-4 px-5 bg-stone-50/80 rounded-xl border border-stone-200/80">
+              <div className="flex flex-wrap items-start gap-8">
+                {/* Reasoning Effort */}
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] font-medium text-stone-500 uppercase tracking-wider whitespace-nowrap">Reasoning</span>
+                  <div className="flex items-center bg-white rounded-lg border border-stone-200 p-0.5 shadow-sm">
                     {(Object.keys(REASONING_CONFIG) as Array<keyof typeof REASONING_CONFIG>).map((effort) => {
                       const config = REASONING_CONFIG[effort];
                       const isActive = settings.reasoningEffort === effort;
@@ -637,112 +763,85 @@ function ChatTab({
                           key={effort}
                           onClick={() => !isDisabled && setSettings(s => ({ ...s, reasoningEffort: effort }))}
                           disabled={isDisabled}
-                          className={`relative flex-1 py-2 px-1 rounded-lg text-[11px] font-medium transition-all duration-200 ${
+                          title={isDisabled ? 'Only available for GPT-5.1' : config.desc}
+                          className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium transition-all ${
                             isDisabled 
-                              ? 'opacity-30 cursor-not-allowed text-stone-400' 
+                              ? 'opacity-25 cursor-not-allowed text-stone-400' 
                               : isActive 
-                                ? 'bg-white text-stone-900 shadow-sm' 
-                                : 'text-stone-500 hover:text-stone-700'
+                                ? 'bg-stone-800 text-white shadow-sm' 
+                                : 'text-stone-500 hover:text-stone-700 hover:bg-stone-50'
                           }`}
                         >
-                          <div className="flex flex-col items-center gap-0.5">
-                            {/* Level indicator dots */}
-                            <div className="flex gap-0.5">
-                              {[...Array(5)].map((_, i) => (
-                                <div 
-                                  key={i} 
-                                  className={`w-1 h-1 rounded-full transition-colors ${
-                                    i <= config.level 
-                                      ? isActive ? 'bg-indigo-500' : 'bg-stone-400' 
-                                      : 'bg-stone-200'
-                                  }`} 
-                                />
-                              ))}
-                            </div>
-                            <span>{config.name}</span>
-                          </div>
+                          <span className="text-[13px]">{config.icon}</span>
+                          <span>{config.name}</span>
                         </button>
                       );
                     })}
                   </div>
                 </div>
-                {/* Web search warning */}
-                {settings.reasoningEffort === 'minimal' && (
-                  <div className="mt-2 flex items-center gap-1.5 text-[10px] text-amber-600">
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-                    </svg>
-                    Web search unavailable with Light reasoning
-                  </div>
-                )}
-              </div>
 
-              {/* Response Length - Segmented control */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-[11px] font-semibold text-stone-500 uppercase tracking-wide">Response Length</label>
-                </div>
-                <div className="flex items-center bg-stone-100 rounded-xl p-1 gap-0.5">
-                  {(Object.keys(VERBOSITY_CONFIG) as Array<keyof typeof VERBOSITY_CONFIG>).map((level) => {
-                    const config = VERBOSITY_CONFIG[level];
-                    const isActive = settings.verbosity === level;
-                    
-                    return (
+                {/* Response Length */}
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] font-medium text-stone-500 uppercase tracking-wider whitespace-nowrap">Length</span>
+                  <div className="flex items-center bg-white rounded-lg border border-stone-200 p-0.5 shadow-sm">
+                    {[
+                      { key: 'low' as const, label: 'Concise', icon: '📝' },
+                      { key: 'medium' as const, label: 'Balanced', icon: '📄' },
+                      { key: 'high' as const, label: 'Detailed', icon: '📚' },
+                    ].map(({ key, label, icon }) => (
                       <button
-                        key={level}
-                        onClick={() => setSettings(s => ({ ...s, verbosity: level }))}
-                        className={`flex-1 py-2 px-2 rounded-lg text-[11px] font-medium transition-all duration-200 ${
-                          isActive 
-                            ? 'bg-white text-stone-900 shadow-sm' 
-                            : 'text-stone-500 hover:text-stone-700'
+                        key={key}
+                        onClick={() => setSettings(s => ({ ...s, verbosity: key }))}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium transition-all ${
+                          settings.verbosity === key 
+                            ? 'bg-stone-800 text-white shadow-sm' 
+                            : 'text-stone-500 hover:text-stone-700 hover:bg-stone-50'
                         }`}
                       >
-                        {config.name}
+                        <span className="text-[13px]">{icon}</span>
+                        <span>{label}</span>
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Compact status bar */}
-            <div className="mt-3 pt-3 border-t border-stone-100 flex items-center justify-between">
-              <div className="flex items-center gap-3 text-[10px] text-stone-400">
-                <span className="flex items-center gap-1.5">
-                  <span className={`w-1.5 h-1.5 rounded-full ${MODEL_CONFIG[settings.model].badge}`} />
-                  {MODEL_CONFIG[settings.model].name}
-                </span>
-                <span className="text-stone-200">|</span>
-                <span>{REASONING_CONFIG[settings.reasoningEffort].name} reasoning</span>
-                <span className="text-stone-200">|</span>
-                <span>{VERBOSITY_CONFIG[settings.verbosity].name}</span>
-              </div>
-              <button 
-                onClick={() => setShowSettings(false)}
-                className="text-[10px] text-stone-400 hover:text-stone-600 transition-colors"
-              >
-                Collapse
-              </button>
+              {/* Web search incompatibility warning */}
+              {settings.reasoningEffort === 'minimal' && (
+                <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-amber-50/80 border border-amber-200/60 rounded-lg">
+                  <svg className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span className="text-[11px] text-amber-700">Web search unavailable with Minimal reasoning</span>
+                </div>
+              )}
             </div>
-          </div>
+          )}
         </div>
       </div>
 
       {/* System Prompt Editor Panel */}
       {showPromptEditor && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowPromptEditor(false)} />
-          <div className="relative w-full max-w-xl bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setShowPromptEditor(false)} />
+          <div className="relative w-full max-w-2xl bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
             {/* Panel header */}
-            <div className="flex-shrink-0 px-5 py-4 border-b border-stone-100">
+            <div className="flex-shrink-0 p-5 border-b border-stone-200 bg-gradient-to-r from-stone-800 to-stone-900">
               <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-[15px] font-semibold text-stone-800">System Prompts</h3>
-                  <p className="text-[11px] text-stone-400 mt-0.5">Customize behavior per model</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-[16px] font-semibold text-white">System Prompts</h3>
+                    <p className="text-[12px] text-white/60 mt-0.5">Customize AI behavior for each model</p>
+                  </div>
                 </div>
                 <button
                   onClick={() => setShowPromptEditor(false)}
-                  className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"
+                  className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -752,8 +851,8 @@ function ChatTab({
             </div>
 
             {/* Model tabs */}
-            <div className="flex-shrink-0 border-b border-stone-100 bg-white">
-              <div className="flex">
+            <div className="flex-shrink-0 border-b border-stone-200 bg-stone-50">
+              <div className="flex overflow-x-auto scrollbar-hide">
                 {(Object.keys(MODEL_CONFIG) as Array<keyof typeof MODEL_CONFIG>).map((model) => {
                   const config = MODEL_CONFIG[model];
                   const isActive = selectedPromptModel === model;
@@ -766,16 +865,21 @@ function ChatTab({
                         setSelectedPromptModel(model);
                         setEditingPrompt(systemPrompts[model] || DEFAULT_SYSTEM_PROMPTS[model] || '');
                       }}
-                      className={`relative flex items-center gap-2 px-5 py-3 text-[12px] font-medium whitespace-nowrap transition-all border-b-2 ${
+                      className={`relative flex items-center gap-2 px-5 py-3.5 text-[13px] font-medium whitespace-nowrap transition-all border-b-2 ${
                         isActive 
-                          ? 'text-stone-800 border-stone-800' 
-                          : 'text-stone-400 border-transparent hover:text-stone-600'
+                          ? 'text-stone-800 border-stone-800 bg-white' 
+                          : 'text-stone-500 border-transparent hover:text-stone-700 hover:bg-stone-100'
                       }`}
                     >
-                      <span className={`w-1.5 h-1.5 rounded-full ${config.badge}`} />
+                      <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${config.color}`} />
                       {config.name}
                       {isModified && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" title="Modified" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" title="Modified" />
+                      )}
+                      {config.badge && (
+                        <span className="px-1.5 py-0.5 text-[9px] font-bold bg-violet-100 text-violet-600 rounded">
+                          {config.badge}
+                        </span>
                       )}
                     </button>
                   );
@@ -784,34 +888,47 @@ function ChatTab({
             </div>
 
             {/* Editor area */}
-            <div className="flex-1 flex flex-col min-h-0 p-4">
-              {/* Textarea with header */}
-              <div className="flex-1 min-h-0 flex flex-col">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${MODEL_CONFIG[selectedPromptModel as keyof typeof MODEL_CONFIG]?.badge || 'bg-stone-400'}`} />
-                    <span className="text-[12px] font-medium text-stone-700">
-                      {MODEL_CONFIG[selectedPromptModel as keyof typeof MODEL_CONFIG]?.name || selectedPromptModel}
-                    </span>
-                    <span className="text-[11px] text-stone-400">
-                      · {MODEL_CONFIG[selectedPromptModel as keyof typeof MODEL_CONFIG]?.desc || 'Custom model'}
-                    </span>
+            <div className="flex-1 flex flex-col min-h-0 p-5">
+              {/* Current model info */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${MODEL_CONFIG[selectedPromptModel as keyof typeof MODEL_CONFIG]?.color || 'from-stone-400 to-stone-500'} flex items-center justify-center shadow-md`}>
+                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                    </svg>
                   </div>
-                  
-                  {/* Reset button */}
-                  {systemPrompts[selectedPromptModel] !== DEFAULT_SYSTEM_PROMPTS[selectedPromptModel] && (
-                    <button
-                      onClick={async () => {
-                        await resetPrompt(selectedPromptModel);
-                        setEditingPrompt(DEFAULT_SYSTEM_PROMPTS[selectedPromptModel] || '');
-                      }}
-                      className="text-[11px] font-medium text-amber-600 hover:text-amber-700 transition-colors"
-                    >
-                      Reset to default
-                    </button>
-                  )}
+                  <div>
+                    <h4 className="text-[14px] font-semibold text-stone-800">
+                      {MODEL_CONFIG[selectedPromptModel as keyof typeof MODEL_CONFIG]?.name || selectedPromptModel}
+                    </h4>
+                    <p className="text-[11px] text-stone-500">
+                      {MODEL_CONFIG[selectedPromptModel as keyof typeof MODEL_CONFIG]?.desc || 'Custom model'}
+                    </p>
+                  </div>
                 </div>
                 
+                {/* Reset button */}
+                {systemPrompts[selectedPromptModel] !== DEFAULT_SYSTEM_PROMPTS[selectedPromptModel] && (
+                  <button
+                    onClick={async () => {
+                      await resetPrompt(selectedPromptModel);
+                      setEditingPrompt(DEFAULT_SYSTEM_PROMPTS[selectedPromptModel] || '');
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Reset to default
+                  </button>
+                )}
+              </div>
+
+              {/* Textarea */}
+              <div className="flex-1 min-h-0 flex flex-col">
+                <label className="block text-[11px] font-semibold text-stone-500 uppercase tracking-wide mb-2">
+                  System Instructions
+                </label>
                 <div className="flex-1 relative">
                   <textarea
                     value={editingPrompt || systemPrompts[selectedPromptModel] || DEFAULT_SYSTEM_PROMPTS[selectedPromptModel] || ''}
@@ -822,21 +939,21 @@ function ChatTab({
                         await savePrompt(selectedPromptModel, editingPrompt);
                       }
                     }}
-                    placeholder="Enter system instructions..."
-                    className="absolute inset-0 w-full h-full p-3 text-[13px] leading-relaxed text-stone-700 bg-stone-50 border border-stone-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-stone-300/50 focus:border-stone-300 placeholder:text-stone-400 font-mono"
+                    placeholder="Enter system instructions for this model..."
+                    className="absolute inset-0 w-full h-full p-4 text-[14px] leading-relaxed text-stone-700 bg-stone-50 border border-stone-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-stone-400/30 focus:border-stone-400 placeholder:text-stone-400 font-mono"
                   />
                 </div>
-                <div className="flex items-center justify-between mt-2 pt-2 border-t border-stone-100">
-                  <span className="text-[10px] text-stone-400">
-                    {(editingPrompt || systemPrompts[selectedPromptModel] || '').length} chars
+                <div className="flex items-center justify-between mt-3">
+                  <span className="text-[11px] text-stone-400">
+                    {(editingPrompt || systemPrompts[selectedPromptModel] || '').length} characters
                   </span>
-                  <span className="text-[10px] text-stone-400 flex items-center gap-1">
+                  <span className="text-[11px] text-stone-400 flex items-center gap-1.5">
                     {promptsSynced ? (
                       <>
                         <svg className="w-3 h-3 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
-                        <span className="text-emerald-500">Saved</span>
+                        <span className="text-emerald-600">Synced to cloud</span>
                       </>
                     ) : promptsLoading ? (
                       <>
@@ -844,26 +961,26 @@ function ChatTab({
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                         </svg>
-                        <span>Saving</span>
+                        <span>Syncing...</span>
                       </>
                     ) : (
-                      <span>Auto-saves</span>
+                      <span>Auto-saves on blur</span>
                     )}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Quick templates - more subtle */}
-            <div className="flex-shrink-0 border-t border-stone-100 bg-stone-50/50 px-4 py-3">
-              <p className="text-[10px] font-medium text-stone-400 uppercase tracking-wide mb-2">Templates</p>
-              <div className="flex flex-wrap gap-1.5">
+            {/* Quick templates */}
+            <div className="flex-shrink-0 border-t border-stone-200 bg-stone-50 p-4">
+              <p className="text-[11px] font-semibold text-stone-500 uppercase tracking-wide mb-3">Quick Templates</p>
+              <div className="flex flex-wrap gap-2">
                 {[
-                  { label: 'Concise', prompt: 'Be concise and direct. Avoid unnecessary words. Get to the point quickly.' },
-                  { label: 'Detailed', prompt: 'Provide comprehensive, detailed responses. Include examples, explanations, and context. Be thorough.' },
-                  { label: 'Technical', prompt: 'Use precise technical language. Include code examples when relevant. Assume technical competency.' },
-                  { label: 'Friendly', prompt: 'Be warm, friendly, and conversational. Use casual language. Make the interaction enjoyable.' },
-                  { label: 'Academic', prompt: 'Use formal academic tone. Cite reasoning. Structure responses logically with clear arguments.' },
+                  { label: 'Concise', icon: '📝', prompt: 'Be concise and direct. Avoid unnecessary words. Get to the point quickly.' },
+                  { label: 'Detailed', icon: '📚', prompt: 'Provide comprehensive, detailed responses. Include examples, explanations, and context. Be thorough.' },
+                  { label: 'Technical', icon: '⚙️', prompt: 'Use precise technical language. Include code examples when relevant. Assume technical competency.' },
+                  { label: 'Friendly', icon: '😊', prompt: 'Be warm, friendly, and conversational. Use casual language. Make the interaction enjoyable.' },
+                  { label: 'Academic', icon: '🎓', prompt: 'Use formal academic tone. Cite reasoning. Structure responses logically with clear arguments.' },
                 ].map((template) => (
                   <button
                     key={template.label}
@@ -871,8 +988,9 @@ function ChatTab({
                       setEditingPrompt(template.prompt);
                       await savePrompt(selectedPromptModel, template.prompt);
                     }}
-                    className="px-2.5 py-1 text-[11px] font-medium text-stone-500 bg-white border border-stone-200 rounded-md hover:border-stone-300 hover:text-stone-700 transition-all"
+                    className="flex items-center gap-1.5 px-3 py-2 text-[12px] font-medium text-stone-600 bg-white border border-stone-200 rounded-lg hover:border-stone-300 hover:bg-stone-50 transition-all"
                   >
+                    <span>{template.icon}</span>
                     {template.label}
                   </button>
                 ))}
@@ -880,7 +998,7 @@ function ChatTab({
             </div>
 
             {/* Panel footer */}
-            <div className="flex-shrink-0 px-4 py-3 border-t border-stone-100">
+            <div className="flex-shrink-0 p-4 border-t border-stone-200 bg-gradient-to-t from-stone-100 to-stone-50">
               <button
                 onClick={async () => {
                   // Save current editing prompt before closing
@@ -889,7 +1007,7 @@ function ChatTab({
                   }
                   setShowPromptEditor(false);
                 }}
-                className="w-full py-2.5 px-4 bg-stone-800 hover:bg-stone-900 text-white text-[13px] font-medium rounded-lg transition-all"
+                className="w-full py-3.5 px-4 bg-gradient-to-r from-stone-800 to-stone-900 hover:from-stone-900 hover:to-black text-white text-[14px] font-bold rounded-xl transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
               >
                 Done
               </button>
@@ -1240,38 +1358,109 @@ function ChatTab({
                     </details>
                   )}
 
-                  {/* Message bubble */}
-                  <div className={`inline-block text-left ${
-                    msg.role === 'user' 
-                      ? 'bg-indigo-600 text-white rounded-2xl rounded-tr-md' 
-                      : 'bg-stone-100 text-stone-700 rounded-2xl rounded-tl-md'
-                  } px-4 py-3 shadow-sm`}>
-                    {msg.content ? (
-                      <div className="text-[14px] leading-relaxed">
-                        {msg.role === 'assistant' ? formatChatContent(msg.content) : <span className="whitespace-pre-wrap">{msg.content}</span>}
+                  {/* Message bubble - with edit mode */}
+                  {editingMessageId === msg.id ? (
+                    /* Edit mode */
+                    <div className="w-full">
+                      <div className="relative">
+                        <textarea
+                          value={editingContent}
+                          onChange={(e) => setEditingContent(e.target.value)}
+                          className="w-full px-4 py-3 text-[14px] leading-relaxed bg-white border-2 border-indigo-300 rounded-2xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 resize-none min-h-[80px] text-stone-700"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') {
+                              cancelEditMessage();
+                            } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                              saveEditAndRerun();
+                            }
+                          }}
+                        />
                       </div>
-                    ) : msg.isStreaming ? (
-                      <div className="flex items-center gap-2">
-                        {msg.searchStatus?.searching ? (
-                          <div className="flex items-center gap-2 text-sky-600">
-                            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      <div className="flex items-center gap-2 mt-2 justify-end">
+                        <button
+                          onClick={cancelEditMessage}
+                          className="px-3 py-1.5 text-[12px] font-medium text-stone-500 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={saveEditAndRerun}
+                          disabled={!editingContent.trim() || isLoading}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          Save & Re-run
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-stone-400 mt-1.5 text-right">
+                        <kbd className="px-1.5 py-0.5 bg-stone-100 rounded text-[9px] font-mono">⌘</kbd>+<kbd className="px-1.5 py-0.5 bg-stone-100 rounded text-[9px] font-mono">Enter</kbd> to save • <kbd className="px-1.5 py-0.5 bg-stone-100 rounded text-[9px] font-mono">Esc</kbd> to cancel
+                      </p>
+                    </div>
+                  ) : (
+                    /* Normal display with hover actions */
+                    <div className="group/message relative">
+                      <div className={`inline-block text-left ${
+                        msg.role === 'user' 
+                          ? 'bg-indigo-600 text-white rounded-2xl rounded-tr-md' 
+                          : 'bg-stone-100 text-stone-700 rounded-2xl rounded-tl-md'
+                      } px-4 py-3 shadow-sm`}>
+                        {msg.content ? (
+                          <div className="text-[14px] leading-relaxed">
+                            {msg.role === 'assistant' ? formatChatContent(msg.content) : <span className="whitespace-pre-wrap">{msg.content}</span>}
+                          </div>
+                        ) : msg.isStreaming ? (
+                          <div className="flex items-center gap-2">
+                            {msg.searchStatus?.searching ? (
+                              <div className="flex items-center gap-2 text-sky-600">
+                                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                </svg>
+                                <span className="text-[13px]">Searching web...</span>
+                              </div>
+                            ) : (
+                              <div className="flex gap-1.5 items-center">
+                                <div className="flex gap-1">
+                                  <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                                  <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                                  <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ) : null}
+                      </div>
+                      
+                      {/* Hover actions - Edit & Delete */}
+                      {!msg.isStreaming && msg.content && (
+                        <div className={`absolute top-0 ${msg.role === 'user' ? 'left-0 -translate-x-full pr-2' : 'right-0 translate-x-full pl-2'} opacity-0 group-hover/message:opacity-100 transition-opacity flex items-center gap-1`}>
+                          {msg.role === 'user' && (
+                            <button
+                              onClick={() => startEditMessage(msg)}
+                              className="p-1.5 text-stone-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                              title="Edit message"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => deleteMessageAndAfter(msg.id)}
+                            className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                            title={msg.role === 'user' ? 'Delete from here' : 'Delete response'}
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
-                            <span className="text-[13px]">Searching web...</span>
-                          </div>
-                        ) : (
-                          <div className="flex gap-1.5 items-center">
-                            <div className="flex gap-1">
-                              <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                              <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                              <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ) : null}
-                  </div>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Citations */}
                   {(() => {
@@ -1394,14 +1583,14 @@ function ChatTab({
 
           {/* Input box */}
           <div className="relative">
-            <div className="flex items-end gap-2 bg-white border border-stone-200 rounded-2xl px-3 py-2 focus-within:border-stone-300 focus-within:shadow-sm transition-all">
+            <div className="flex items-end gap-2 bg-white border border-stone-200 rounded-2xl pl-3 pr-2 py-2 focus-within:border-indigo-300 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all shadow-sm">
               {/* Context button */}
               <button
                 onClick={() => setShowContextPanel(true)}
-                className={`flex-shrink-0 flex items-center gap-1 p-1.5 rounded-lg transition-all ${
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-all ${
                   attachedMessages.length > 0
-                    ? 'bg-indigo-50 text-indigo-600'
-                    : 'text-stone-300 hover:text-stone-500 hover:bg-stone-50'
+                    ? 'bg-indigo-100 text-indigo-600'
+                    : 'text-stone-400 hover:text-stone-600 hover:bg-stone-100'
                 }`}
                 title="Add context from transcript"
               >
@@ -1409,33 +1598,42 @@ function ChatTab({
                   <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
                 </svg>
                 {attachedMessages.length > 0 && (
-                  <span className="text-[10px] font-semibold">{attachedMessages.length}</span>
+                  <span className="text-[11px] font-semibold">{attachedMessages.length}</span>
                 )}
               </button>
 
-              {/* Web Search toggle - Clean switch style */}
+              {/* Web Search toggle */}
               <button
                 onClick={() => !isWebSearchDisabled && setSettings(s => ({ ...s, webSearch: !s.webSearch }))}
                 disabled={isWebSearchDisabled}
-                className={`flex-shrink-0 flex items-center gap-1.5 p-1.5 rounded-lg transition-all ${
+                className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${
                   isWebSearchDisabled
-                    ? 'opacity-40 cursor-not-allowed text-stone-300'
+                    ? 'opacity-50 cursor-not-allowed text-stone-300 border border-stone-200 bg-stone-50'
                     : settings.webSearch
-                      ? 'text-sky-600 bg-sky-50'
-                      : 'text-stone-300 hover:text-stone-500 hover:bg-stone-50'
+                      ? 'bg-gradient-to-r from-sky-500 to-cyan-500 text-white shadow-md shadow-sky-500/25'
+                      : 'text-stone-400 hover:text-stone-600 hover:bg-stone-100 border border-stone-200'
                 }`}
                 title={isWebSearchDisabled 
-                  ? 'Web search unavailable with Light reasoning' 
+                  ? 'Web search is not available with Minimal reasoning effort' 
                   : settings.webSearch 
-                    ? 'Web search on' 
-                    : 'Web search off'
+                    ? 'Web search enabled' 
+                    : 'Web search disabled'
                 }
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />
-                </svg>
+                <div className={`relative w-4 h-4 ${settings.webSearch && !isWebSearchDisabled ? 'animate-pulse' : ''}`} style={{ animationDuration: '3s' }}>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={settings.webSearch && !isWebSearchDisabled ? 2.5 : 2}>
+                    <circle cx="12" cy="12" r="9" />
+                    <ellipse cx="12" cy="12" rx="9" ry="4" />
+                    <ellipse cx="12" cy="12" rx="4" ry="9" />
+                  </svg>
+                </div>
                 {settings.webSearch && !isWebSearchDisabled && (
-                  <span className="text-[9px] font-bold uppercase tracking-wider">Web</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wide">Web</span>
+                )}
+                {isWebSearchDisabled && (
+                  <svg className="w-3 h-3 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                  </svg>
                 )}
               </button>
 
@@ -1445,10 +1643,10 @@ function ChatTab({
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={attachedMessages.length > 0 ? "Add a question, or just send to analyze..." : `Message ${MODEL_CONFIG[settings.model].name}...`}
+                placeholder={attachedMessages.length > 0 ? "Add a question, or just send to analyze..." : "Message GPT-5..."}
                 rows={1}
                 disabled={isLoading}
-                className="flex-1 bg-transparent text-[14px] text-stone-700 placeholder:text-stone-400 resize-none focus:outline-none min-h-[24px] max-h-[200px] py-1 disabled:opacity-50"
+                className="flex-1 bg-transparent text-[15px] text-stone-700 placeholder:text-stone-400 resize-none focus:outline-none min-h-[28px] max-h-[200px] py-1 disabled:opacity-50"
                 onInput={(e) => {
                   const target = e.target as HTMLTextAreaElement;
                   target.style.height = 'auto';
@@ -1460,54 +1658,65 @@ function ChatTab({
               <button
                 onClick={handleSend}
                 disabled={(!inputValue.trim() && attachedMessages.length === 0) || isLoading}
-                className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+                className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
                   (inputValue.trim() || attachedMessages.length > 0) && !isLoading
-                    ? 'bg-stone-800 text-white hover:bg-stone-900'
-                    : 'bg-stone-100 text-stone-300 cursor-not-allowed'
+                    ? `bg-gradient-to-r ${MODEL_CONFIG[settings.model].color} text-white shadow-lg`
+                    : 'bg-stone-100 text-stone-400 cursor-not-allowed'
                 }`}
               >
                 {isLoading ? (
-                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
                 ) : (
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18" />
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
                   </svg>
                 )}
               </button>
             </div>
 
-            {/* Minimal helper text */}
-            <div className="flex items-center justify-center gap-2 mt-1.5">
-              <span className="text-[10px] text-stone-300 flex items-center gap-1.5">
-                <span className={`w-1 h-1 rounded-full ${MODEL_CONFIG[settings.model].badge}`} />
+            {/* Helper text */}
+            <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
+              <span className="text-[10px] text-stone-400">
                 {MODEL_CONFIG[settings.model].name}
-                <span className="text-stone-200">·</span>
-                {REASONING_CONFIG[settings.reasoningEffort].name}
-                {settings.webSearch && (
-                  <>
-                    <span className="text-stone-200">·</span>
-                    <span className="text-sky-400">Web</span>
-                  </>
-                )}
               </span>
+              <span className="text-[10px] text-stone-300">•</span>
+              <span className="text-[10px] text-stone-400">
+                {REASONING_CONFIG[settings.reasoningEffort].icon} {REASONING_CONFIG[settings.reasoningEffort].name}
+              </span>
+              {settings.webSearch && (
+                <>
+                  <span className="text-[10px] text-stone-300">•</span>
+                  <span className="text-[10px] text-sky-500 flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                    </svg>
+                    Web
+                  </span>
+                </>
+              )}
               {systemPrompts[settings.model] !== DEFAULT_SYSTEM_PROMPTS[settings.model] && (
                 <>
-                  <span className="text-stone-200">·</span>
+                  <span className="text-[10px] text-stone-300">•</span>
                   <button 
                     onClick={() => {
                       setSelectedPromptModel(settings.model);
                       setEditingPrompt(systemPrompts[settings.model] || '');
                       setShowPromptEditor(true);
                     }}
-                    className="text-[10px] text-amber-500 hover:text-amber-600"
+                    className="text-[10px] text-amber-500 hover:text-amber-600 flex items-center gap-1"
                   >
-                    Custom
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5" />
+                    </svg>
+                    Custom prompt
                   </button>
                 </>
               )}
+              <span className="text-[10px] text-stone-300">•</span>
+              <span className="text-[10px] text-stone-400">Enter to send</span>
             </div>
           </div>
         </div>
@@ -1517,7 +1726,576 @@ function ChatTab({
 }
 
 
+// Import evaluation types
+import { 
+  EvaluationResult,
+  CriterionPair,
+  EvaluationApiResponse,
+  CRITERIA_CONFIG, 
+  getScoreColor,
+  getScoreGradient,
+} from '@/types/evaluation';
+
+// Score bar component - refined with subtle animation
+function ScoreBar({ score, maxScore = 10, size = 'md', variant = 'neutral' }: { 
+  score: number; 
+  maxScore?: number; 
+  size?: 'sm' | 'md' | 'lg';
+  variant?: 'neutral' | 'a' | 'b';
+}) {
+  const percentage = Math.min(100, (score / maxScore) * 100);
+  const heights = { sm: 'h-1', md: 'h-1.5', lg: 'h-2' };
+  const height = heights[size];
+  
+  const gradients = {
+    neutral: getScoreGradient(score),
+    a: 'from-violet-400 to-purple-500',
+    b: 'from-teal-400 to-emerald-500',
+  };
+  
+  return (
+    <div className={`w-full ${height} bg-stone-100 rounded-full overflow-hidden`}>
+      <div 
+        className={`${height} bg-gradient-to-r ${gradients[variant]} rounded-full transition-all duration-700 ease-out`}
+        style={{ width: `${percentage}%` }}
+      />
+    </div>
+  );
+}
+
+// Score display with label - kept for potential future use
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _ScoreDisplay({ score, label, size = 'md' }: { score: number; label?: string; size?: 'sm' | 'md' | 'lg' }) {
+  const sizes = {
+    sm: { score: 'text-lg', label: 'text-[10px]' },
+    md: { score: 'text-2xl', label: 'text-[11px]' },
+    lg: { score: 'text-4xl', label: 'text-xs' },
+  };
+  
+  return (
+    <div className="flex flex-col items-center">
+      <span className={`${sizes[size].score} font-semibold tabular-nums tracking-tight ${getScoreColor(score)}`}>
+        {score.toFixed(1)}
+      </span>
+      {label && <span className={`${sizes[size].label} text-stone-400 font-medium uppercase tracking-wide`}>{label}</span>}
+    </div>
+  );
+}
+
+// Evidence quote component for influential text highlighting
+function EvidenceQuote({ 
+  answer, 
+  impact, 
+  quote, 
+  rationale 
+}: { 
+  answer: 'A' | 'B'; 
+  impact: 'favorable' | 'unfavorable'; 
+  quote: string; 
+  rationale: string; 
+}) {
+  const isA = answer === 'A';
+  const isFavorable = impact === 'favorable';
+  
+  return (
+    <div className={`relative pl-3 py-2 rounded-r-lg border-l-2 ${
+      isFavorable 
+        ? isA ? 'border-l-violet-400 bg-violet-50/50' : 'border-l-teal-400 bg-teal-50/50'
+        : 'border-l-rose-300 bg-rose-50/30'
+    }`}>
+      <div className="flex items-center gap-2 mb-1.5">
+        <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${
+          isA 
+            ? 'bg-violet-100 text-violet-700' 
+            : 'bg-teal-100 text-teal-700'
+        }`}>
+          {answer}
+        </span>
+        <span className={`text-[10px] font-medium uppercase tracking-wide px-1.5 py-0.5 rounded ${
+          isFavorable 
+            ? 'bg-emerald-100 text-emerald-700' 
+            : 'bg-rose-100 text-rose-700'
+        }`}>
+          {isFavorable ? '✓ favorable' : '✗ unfavorable'}
+        </span>
+      </div>
+      <blockquote className={`text-[12px] italic leading-relaxed mb-1.5 ${
+        isFavorable ? 'text-stone-700' : 'text-stone-600'
+      }`}>
+        &ldquo;{quote}&rdquo;
+      </blockquote>
+      <p className="text-[11px] text-stone-500 leading-relaxed">
+        → {rationale}
+      </p>
+    </div>
+  );
+}
+
+// Criterion card component - refined with cleaner design and evidence support
+function CriterionCard({ 
+  criterionKey, 
+  data,
+  isExpanded,
+  onToggle,
+}: { 
+  criterionKey: keyof EvaluationResult['criteria_scores'];
+  data: CriterionPair;
+  isExpanded: boolean;
+  onToggle: () => void;
+}) {
+  const config = CRITERIA_CONFIG[criterionKey];
+  const diff = data.A.score - data.B.score;
+  const winner = diff > 0 ? 'A' : diff < 0 ? 'B' : 'tie';
+  
+  // Collect all evidence from both responses
+  const allEvidence = [
+    ...(data.A.evidence || []),
+    ...(data.B.evidence || []),
+  ];
+  
+  // Group evidence by favorable/unfavorable for better display
+  const favorableEvidence = allEvidence.filter(e => e.impact === 'favorable');
+  const unfavorableEvidence = allEvidence.filter(e => e.impact === 'unfavorable');
+  
+  return (
+    <div className={`group bg-white rounded-xl border transition-all duration-200 ${
+      isExpanded ? 'border-stone-300 shadow-sm' : 'border-stone-150 hover:border-stone-250'
+    }`}>
+      <button 
+        onClick={onToggle}
+        className="w-full px-5 py-4 flex items-center gap-4 text-left"
+      >
+        {/* Icon with subtle background */}
+        <div className="w-10 h-10 rounded-lg bg-stone-50 flex items-center justify-center text-lg flex-shrink-0">
+          {config.icon}
+        </div>
+        
+        {/* Title and description */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2 mb-0.5">
+            <h4 className="text-[14px] font-semibold text-stone-800 tracking-tight">{config.name}</h4>
+            <span className="text-[10px] text-stone-400 font-medium">w{config.weight}</span>
+            {allEvidence.length > 0 && (
+              <span className="text-[10px] text-amber-600 font-medium flex items-center gap-1">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+                {allEvidence.length} quotes
+              </span>
+            )}
+          </div>
+          <p className="text-[12px] text-stone-400 leading-relaxed">{config.description}</p>
+        </div>
+        
+        {/* Score comparison - visual bars */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="flex flex-col items-end gap-1 w-16">
+            <div className="flex items-center gap-1.5 w-full">
+              <span className={`text-[10px] font-bold uppercase tracking-wide ${winner === 'A' ? 'text-violet-600' : 'text-stone-400'}`}>A</span>
+              <div className="flex-1 h-1.5 bg-stone-100 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all ${winner === 'A' ? 'bg-violet-500' : 'bg-stone-300'}`}
+                  style={{ width: `${data.A.score * 10}%` }}
+                />
+              </div>
+              <span className={`text-[12px] font-semibold tabular-nums ${winner === 'A' ? 'text-violet-600' : 'text-stone-500'}`}>{data.A.score}</span>
+            </div>
+            <div className="flex items-center gap-1.5 w-full">
+              <span className={`text-[10px] font-bold uppercase tracking-wide ${winner === 'B' ? 'text-teal-600' : 'text-stone-400'}`}>B</span>
+              <div className="flex-1 h-1.5 bg-stone-100 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all ${winner === 'B' ? 'bg-teal-500' : 'bg-stone-300'}`}
+                  style={{ width: `${data.B.score * 10}%` }}
+                />
+              </div>
+              <span className={`text-[12px] font-semibold tabular-nums ${winner === 'B' ? 'text-teal-600' : 'text-stone-500'}`}>{data.B.score}</span>
+            </div>
+          </div>
+          
+          {/* Winner indicator */}
+          <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+            winner === 'A' ? 'bg-violet-100' : winner === 'B' ? 'bg-teal-100' : 'bg-stone-100'
+          }`}>
+            {winner === 'tie' ? (
+              <span className="text-[10px] text-stone-400">=</span>
+            ) : (
+              <span className={`text-[10px] font-bold ${winner === 'A' ? 'text-violet-600' : 'text-teal-600'}`}>{winner}</span>
+            )}
+          </div>
+        </div>
+        
+        {/* Expand chevron */}
+        <svg className={`w-4 h-4 text-stone-300 group-hover:text-stone-400 transition-all flex-shrink-0 ${isExpanded ? 'rotate-180 text-stone-500' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      
+      {/* Expanded content with justifications and evidence */}
+      {isExpanded && (
+        <div className="px-5 pb-5 pt-1 space-y-4 border-t border-stone-100">
+          {/* Side by side justifications */}
+          <div className="grid grid-cols-2 gap-4 pt-3">
+            {/* Response A */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+                    <span className="text-[10px] font-bold text-white">A</span>
+                  </div>
+                  <span className="text-[12px] font-semibold text-stone-700">Debate Outcome</span>
+                </div>
+                <span className={`text-[13px] font-bold tabular-nums ${getScoreColor(data.A.score)}`}>{data.A.score}/10</span>
+              </div>
+              <ScoreBar score={data.A.score} size="sm" variant="a" />
+              <p className="text-[13px] text-stone-600 leading-[1.6]">{data.A.justification}</p>
+            </div>
+            
+            {/* Response B */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
+                    <span className="text-[10px] font-bold text-white">B</span>
+                  </div>
+                  <span className="text-[12px] font-semibold text-stone-700">Chat Response</span>
+                </div>
+                <span className={`text-[13px] font-bold tabular-nums ${getScoreColor(data.B.score)}`}>{data.B.score}/10</span>
+              </div>
+              <ScoreBar score={data.B.score} size="sm" variant="b" />
+              <p className="text-[13px] text-stone-600 leading-[1.6]">{data.B.justification}</p>
+            </div>
+          </div>
+          
+          {/* Evidence Section - Influential Text */}
+          {allEvidence.length > 0 && (
+            <div className="pt-4 border-t border-stone-100">
+              <div className="flex items-center gap-2 mb-3">
+                <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+                <h5 className="text-[12px] font-semibold text-stone-700 uppercase tracking-wide">Influential Text</h5>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                {/* Favorable evidence */}
+                {favorableEvidence.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wide flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                      Strengths
+                    </span>
+                    {favorableEvidence.map((evidence, idx) => (
+                      <EvidenceQuote 
+                        key={`fav-${idx}`}
+                        answer={evidence.answer}
+                        impact={evidence.impact}
+                        quote={evidence.quote}
+                        rationale={evidence.rationale}
+                      />
+                    ))}
+                  </div>
+                )}
+                
+                {/* Unfavorable evidence */}
+                {unfavorableEvidence.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-semibold text-rose-600 uppercase tracking-wide flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      Weaknesses
+                    </span>
+                    {unfavorableEvidence.map((evidence, idx) => (
+                      <EvidenceQuote 
+                        key={`unfav-${idx}`}
+                        answer={evidence.answer}
+                        impact={evidence.impact}
+                        quote={evidence.quote}
+                        rationale={evidence.rationale}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Winner showcase component - refined with elegant design
+function WinnerShowcase({ 
+  evaluation,
+  responseALabel,
+  responseBLabel,
+}: { 
+  evaluation: EvaluationResult;
+  responseALabel: string;
+  responseBLabel: string;
+}) {
+  const winner = evaluation.winner;
+  const winnerLabel = winner === 'A' ? responseALabel : winner === 'B' ? responseBLabel : 'Tie';
+  const scoreA = evaluation.overall.A.weighted_total_score;
+  const scoreB = evaluation.overall.B.weighted_total_score;
+  const maxPossible = 80; // Sum of all weights * 10
+  
+  return (
+    <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden">
+      {/* Verdict Header */}
+      <div className={`px-8 py-6 ${
+        winner === 'A' ? 'bg-gradient-to-r from-violet-500 to-purple-600' 
+        : winner === 'B' ? 'bg-gradient-to-r from-teal-500 to-emerald-600'
+        : 'bg-gradient-to-r from-amber-500 to-orange-500'
+      }`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-white/70 text-[11px] font-medium uppercase tracking-widest">Verdict</span>
+              {evaluation.web_search_used && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/20 rounded-full text-[10px] font-medium text-white">
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  Web Search
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/20 rounded-full text-[10px] font-medium text-white">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+                GPT-5.1 High Reasoning
+              </span>
+            </div>
+            <h2 className="text-[28px] font-bold text-white tracking-tight">
+              {winner === 'tie' ? "It's a Tie" : winnerLabel}
+            </h2>
+            <p className="text-white/80 text-[14px] mt-1">
+              {winner === 'tie' 
+                ? 'Both responses performed equally well overall'
+                : `Winner by ${Math.abs(scoreA - scoreB).toFixed(1)} points`
+              }
+            </p>
+          </div>
+          <div className="text-6xl">
+            {winner === 'tie' ? '⚖️' : '🏆'}
+          </div>
+        </div>
+      </div>
+      
+      {/* Score Comparison */}
+      <div className="p-8">
+        <div className="grid grid-cols-2 gap-8 mb-8">
+          {/* Response A Score */}
+          <div className={`relative p-6 rounded-xl transition-all ${
+            winner === 'A' 
+              ? 'bg-violet-50 ring-2 ring-violet-200' 
+              : 'bg-stone-50'
+          }`}>
+            {winner === 'A' && (
+              <div className="absolute -top-2 -right-2 w-8 h-8 bg-violet-500 rounded-full flex items-center justify-center shadow-lg">
+                <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              </div>
+            )}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-md">
+                <span className="text-white font-bold text-[14px]">A</span>
+              </div>
+              <div>
+                <p className="text-[13px] font-semibold text-stone-800">{responseALabel}</p>
+                <p className="text-[11px] text-stone-400">Multi-agent debate</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-baseline gap-2">
+                <span className="text-[42px] font-bold text-stone-800 tracking-tight tabular-nums">{scoreA.toFixed(1)}</span>
+                <span className="text-[14px] text-stone-400">/ {maxPossible}</span>
+              </div>
+              <ScoreBar score={scoreA} maxScore={maxPossible} size="lg" variant="a" />
+              <p className="text-[12px] text-stone-500">{((scoreA / maxPossible) * 100).toFixed(0)}% of maximum score</p>
+            </div>
+          </div>
+          
+          {/* Response B Score */}
+          <div className={`relative p-6 rounded-xl transition-all ${
+            winner === 'B' 
+              ? 'bg-teal-50 ring-2 ring-teal-200' 
+              : 'bg-stone-50'
+          }`}>
+            {winner === 'B' && (
+              <div className="absolute -top-2 -right-2 w-8 h-8 bg-teal-500 rounded-full flex items-center justify-center shadow-lg">
+                <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              </div>
+            )}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-md">
+                <span className="text-white font-bold text-[14px]">B</span>
+              </div>
+              <div>
+                <p className="text-[13px] font-semibold text-stone-800">{responseBLabel}</p>
+                <p className="text-[11px] text-stone-400">Single-shot chat</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-baseline gap-2">
+                <span className="text-[42px] font-bold text-stone-800 tracking-tight tabular-nums">{scoreB.toFixed(1)}</span>
+                <span className="text-[14px] text-stone-400">/ {maxPossible}</span>
+              </div>
+              <ScoreBar score={scoreB} maxScore={maxPossible} size="lg" variant="b" />
+              <p className="text-[12px] text-stone-500">{((scoreB / maxPossible) * 100).toFixed(0)}% of maximum score</p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Rationale Section */}
+        <div className="border-t border-stone-100 pt-6 mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
+            </svg>
+            <h3 className="text-[14px] font-semibold text-stone-700">Key Differentiator</h3>
+          </div>
+          <p className="text-[15px] text-stone-600 leading-[1.7]">{evaluation.winner_rationale}</p>
+        </div>
+        
+        {/* Summaries Grid */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="p-4 bg-violet-50/50 rounded-xl border border-violet-100">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-4 h-4 rounded bg-violet-200 flex items-center justify-center">
+                <span className="text-[9px] font-bold text-violet-700">A</span>
+              </div>
+              <span className="text-[11px] font-semibold text-violet-700 uppercase tracking-wide">Summary</span>
+            </div>
+            <p className="text-[13px] text-stone-600 leading-[1.6]">{evaluation.overall.A.summary}</p>
+          </div>
+          <div className="p-4 bg-teal-50/50 rounded-xl border border-teal-100">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-4 h-4 rounded bg-teal-200 flex items-center justify-center">
+                <span className="text-[9px] font-bold text-teal-700">B</span>
+              </div>
+              <span className="text-[11px] font-semibold text-teal-700 uppercase tracking-wide">Summary</span>
+            </div>
+            <p className="text-[13px] text-stone-600 leading-[1.6]">{evaluation.overall.B.summary}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Evaluation Tab Component
+// Usage stats component
+function UsageStats({ usage }: { 
+  usage: { 
+    input_tokens: number; 
+    output_tokens: number; 
+    total_tokens: number; 
+    reasoning_tokens?: number; 
+  } 
+}) {
+  return (
+    <div className="flex items-center gap-4 px-4 py-3 bg-stone-50 rounded-xl border border-stone-100">
+      <div className="flex items-center gap-2">
+        <svg className="w-4 h-4 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+        </svg>
+        <span className="text-[11px] font-semibold text-stone-500 uppercase tracking-wide">Token Usage</span>
+      </div>
+      <div className="flex items-center gap-4 text-[12px]">
+        <div className="flex items-center gap-1.5">
+          <span className="text-stone-400">Input:</span>
+          <span className="font-semibold text-stone-600 tabular-nums">{usage.input_tokens.toLocaleString()}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-stone-400">Output:</span>
+          <span className="font-semibold text-stone-600 tabular-nums">{usage.output_tokens.toLocaleString()}</span>
+        </div>
+        {usage.reasoning_tokens !== undefined && usage.reasoning_tokens > 0 && (
+          <div className="flex items-center gap-1.5">
+            <span className="text-amber-500">🧠 Reasoning:</span>
+            <span className="font-semibold text-amber-600 tabular-nums">{usage.reasoning_tokens.toLocaleString()}</span>
+          </div>
+        )}
+        <div className="flex items-center gap-1.5 pl-2 border-l border-stone-200">
+          <span className="text-stone-400">Total:</span>
+          <span className="font-bold text-stone-700 tabular-nums">{usage.total_tokens.toLocaleString()}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Score radar/comparison component
+function ScoreComparison({ evaluation }: { evaluation: EvaluationResult }) {
+  const criteria = Object.keys(evaluation.criteria_scores) as Array<keyof typeof evaluation.criteria_scores>;
+  
+  // Calculate win/loss/tie counts
+  const aWins = criteria.filter(k => evaluation.criteria_scores[k].A.score > evaluation.criteria_scores[k].B.score).length;
+  const bWins = criteria.filter(k => evaluation.criteria_scores[k].B.score > evaluation.criteria_scores[k].A.score).length;
+  const ties = criteria.length - aWins - bWins;
+  
+  // Average scores
+  const avgA = criteria.reduce((sum, k) => sum + evaluation.criteria_scores[k].A.score, 0) / criteria.length;
+  const avgB = criteria.reduce((sum, k) => sum + evaluation.criteria_scores[k].B.score, 0) / criteria.length;
+  
+  return (
+    <div className="grid grid-cols-3 gap-4 p-5 bg-white rounded-xl border border-stone-200">
+      {/* A Stats */}
+      <div className="text-center">
+        <div className="inline-flex items-center gap-2 mb-2">
+          <div className="w-6 h-6 rounded bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+            <span className="text-[10px] font-bold text-white">A</span>
+          </div>
+          <span className="text-[12px] font-semibold text-stone-700">Debate</span>
+        </div>
+        <div className="space-y-1">
+          <div className="text-[24px] font-bold text-violet-600 tabular-nums">{avgA.toFixed(1)}</div>
+          <div className="text-[11px] text-stone-400">avg score</div>
+          <div className="flex justify-center gap-2 mt-2">
+            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-semibold rounded">
+              {aWins} wins
+            </span>
+          </div>
+        </div>
+      </div>
+      
+      {/* VS / Ties */}
+      <div className="flex flex-col items-center justify-center border-x border-stone-100">
+        <div className="text-[10px] font-bold text-stone-300 uppercase tracking-widest mb-1">VS</div>
+        <div className="text-[18px] font-bold text-stone-400">{ties}</div>
+        <div className="text-[10px] text-stone-400">ties</div>
+      </div>
+      
+      {/* B Stats */}
+      <div className="text-center">
+        <div className="inline-flex items-center gap-2 mb-2">
+          <div className="w-6 h-6 rounded bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
+            <span className="text-[10px] font-bold text-white">B</span>
+          </div>
+          <span className="text-[12px] font-semibold text-stone-700">Chat</span>
+        </div>
+        <div className="space-y-1">
+          <div className="text-[24px] font-bold text-teal-600 tabular-nums">{avgB.toFixed(1)}</div>
+          <div className="text-[11px] text-stone-400">avg score</div>
+          <div className="flex justify-center gap-2 mt-2">
+            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-semibold rounded">
+              {bWins} wins
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EvaluationTab({ 
   messages, 
   chatMessages,
@@ -1532,236 +2310,429 @@ function EvaluationTab({
   onSaveEvaluation?: (maude: string, chat: string, eval_: string) => void;
 }) {
   const [isEvaluating, setIsEvaluating] = useState(false);
-  const [evaluationResult, setEvaluationResult] = useState<string | null>(null);
+  const [evaluationResult, setEvaluationResult] = useState<EvaluationResult | null>(null);
+  const [usageStats, setUsageStats] = useState<{ input_tokens: number; output_tokens: number; total_tokens: number; reasoning_tokens?: number } | null>(null);
+  const [expandedCriteria, setExpandedCriteria] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   // Sync local state with saved evaluation when it loads
   useEffect(() => {
     if (savedEvaluation?.evaluation && !evaluationResult) {
-      console.log('[Eval] Restoring saved evaluation');
-      setEvaluationResult(savedEvaluation.evaluation);
+      try {
+        const parsed = JSON.parse(savedEvaluation.evaluation);
+        setEvaluationResult(parsed.evaluation || parsed);
+        if (parsed.usage) {
+          setUsageStats(parsed.usage);
+        }
+      } catch {
+        // Legacy format - ignore
+      }
     }
   }, [savedEvaluation, evaluationResult]);
 
-  // Get the final response from Maude (moderator) - last moderator message
-  const maudeFinalResponse = useMemo(() => {
+  // Get final debate response - aggregate all agent content
+  const debateFinalResponse = useMemo(() => {
+    // Get the most substantive response from the debate
+    // Priority: moderator's final summary, then claude, then gpt
     const moderatorMessages = messages.filter(m => m.role === 'moderator');
-    return moderatorMessages[moderatorMessages.length - 1]?.content || null;
+    const claudeMessages = messages.filter(m => m.role === 'claude');
+    const gptMessages = messages.filter(m => m.role === 'gpt');
+    
+    // Get the last moderator message as it usually contains the final summary
+    const moderatorFinal = moderatorMessages[moderatorMessages.length - 1]?.content;
+    
+    // If no moderator, get the last substantive AI response
+    if (!moderatorFinal) {
+      const lastClaude = claudeMessages[claudeMessages.length - 1]?.content;
+      const lastGpt = gptMessages[gptMessages.length - 1]?.content;
+      return lastClaude || lastGpt || null;
+    }
+    
+    return moderatorFinal;
   }, [messages]);
 
-  // Get the final assistant response from chat
+  // Get the final assistant response from chat - Response B
   const chatFinalResponse = useMemo(() => {
     const assistantMessages = chatMessages.filter(m => m.role === 'assistant' && m.content && !m.isStreaming);
     return assistantMessages[assistantMessages.length - 1]?.content || null;
   }, [chatMessages]);
 
+  // Get user task from the debate
+  const userTask = useMemo(() => {
+    const userMessages = messages.filter(m => m.role === 'user');
+    return userMessages[0]?.content || 'Provide a helpful response';
+  }, [messages]);
+
+  const toggleCriterion = (key: string) => {
+    setExpandedCriteria(prev => 
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  };
+
+  const expandAll = () => {
+    setExpandedCriteria(Object.keys(CRITERIA_CONFIG));
+  };
+
+  const collapseAll = () => {
+    setExpandedCriteria([]);
+  };
+
   const handleEvaluate = async () => {
-    if (!maudeFinalResponse || !chatFinalResponse) return;
+    if (!debateFinalResponse || !chatFinalResponse) return;
     
     setIsEvaluating(true);
     setEvaluationResult(null);
+    setError(null);
     
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetch('/api/evaluate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [{
-            role: 'user',
-            content: `Compare and evaluate these two responses to determine which is better. Be concise but thorough.
-
-**Response A (Maude - from transcript):**
-${maudeFinalResponse}
-
-**Response B (Chat - from GPT):**
-${chatFinalResponse}
-
-Please evaluate:
-1. Which response is more accurate/helpful?
-2. Key differences between them
-3. Overall recommendation`,
-          }],
-          settings: {
-            model: 'gpt-5',
-            reasoningEffort: 'medium',
-            verbosity: 'medium',
-            webSearch: false,
-          },
-          context: [],
+          userTask,
+          // Response A = Debate response (blind - don't reveal source)
+          responseA: debateFinalResponse,
+          // Response B = Chat response (blind - don't reveal source)
+          responseB: chatFinalResponse,
         }),
       });
 
-      if (!response.ok) throw new Error('Evaluation failed');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || 'Evaluation failed');
+      }
 
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let fullContent = '';
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(line.slice(6));
-                if (data.type === 'content') {
-                  fullContent += data.content;
-                  setEvaluationResult(fullContent);
-                }
-              } catch {
-                // Skip invalid JSON
-              }
-            }
-          }
-        }
+      const data: EvaluationApiResponse = await response.json();
+      setEvaluationResult(data.evaluation);
+      
+      // Store usage stats
+      if (data.usage) {
+        setUsageStats(data.usage);
       }
       
-      // Save the evaluation result
-      if (fullContent && onSaveEvaluation) {
-        onSaveEvaluation(maudeFinalResponse || '', chatFinalResponse || '', fullContent);
+      // Save the evaluation result with usage
+      if (onSaveEvaluation) {
+        onSaveEvaluation(
+          debateFinalResponse || '', 
+          chatFinalResponse || '', 
+          JSON.stringify({ evaluation: data.evaluation, usage: data.usage })
+        );
       }
-    } catch (error) {
-      console.error('Evaluation error:', error);
-      setEvaluationResult('⚠️ Evaluation failed. Please try again.');
+    } catch (err) {
+      console.error('Evaluation error:', err);
+      setError(err instanceof Error ? err.message : 'Evaluation failed. Please try again.');
     } finally {
       setIsEvaluating(false);
     }
   };
 
+  const clearEvaluation = () => {
+    setEvaluationResult(null);
+    setUsageStats(null);
+    setExpandedCriteria([]);
+  };
+
   return (
-    <main ref={scrollRef} className="flex-1 overflow-y-auto">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-        {/* Response Comparison Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-stone-800">Response Comparison</h2>
-            <button
-              onClick={handleEvaluate}
-              disabled={!maudeFinalResponse || !chatFinalResponse || isEvaluating}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[14px] font-semibold transition-all ${
-                maudeFinalResponse && chatFinalResponse && !isEvaluating
-                  ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:scale-105'
-                  : 'bg-stone-200 text-stone-400 cursor-not-allowed'
-              }`}
-            >
-              {isEvaluating ? (
-                <>
-                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Evaluating...
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Evaluate
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Side by side comparison */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Maude's Response */}
-            <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden">
-              <div className="px-4 py-3 bg-gradient-to-r from-amber-400 to-orange-500 flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">M</span>
-                </div>
-                <div>
-                  <h3 className="text-[14px] font-semibold text-white">Maude&apos;s Response</h3>
-                  <p className="text-[11px] text-white/70">From transcript (Moderator)</p>
-                </div>
-              </div>
-              <div className="p-4 max-h-[400px] overflow-y-auto">
-                {maudeFinalResponse ? (
-                  <div className="text-[14px] text-stone-700 leading-relaxed">{formatChatContent(maudeFinalResponse)}</div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-12 text-stone-400">
-                    <svg className="w-12 h-12 mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                    <p className="text-[13px]">No moderator response found</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Chat Response */}
-            <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden">
-              <div className="px-4 py-3 bg-gradient-to-r from-emerald-400 to-teal-500 flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+    <main ref={scrollRef} className="flex-1 overflow-y-auto bg-stone-50/50">
+      <div className="max-w-5xl mx-auto px-6 py-10">
+        {/* Hero Header */}
+        <header className="mb-10">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-[14px] font-semibold text-white">Chat Response</h3>
-                  <p className="text-[11px] text-white/70">From GPT (Latest)</p>
+                  <h1 className="text-[22px] font-bold text-stone-800 tracking-tight">
+                    Comparative Evaluation
+                  </h1>
+                  <p className="text-[13px] text-stone-500">
+                    Blind assessment across 7 criteria with weighted scoring
+                  </p>
                 </div>
               </div>
-              <div className="p-4 max-h-[400px] overflow-y-auto">
-                {chatFinalResponse ? (
-                  <div className="text-[14px] text-stone-700 leading-relaxed">{formatChatContent(chatFinalResponse)}</div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-12 text-stone-400">
-                    <svg className="w-12 h-12 mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+            </div>
+            
+            <div className="flex items-center gap-3">
+              {evaluationResult && (
+                <button
+                  onClick={clearEvaluation}
+                  className="px-4 py-2 text-[13px] font-medium text-stone-500 hover:text-stone-700 bg-white border border-stone-200 hover:border-stone-300 rounded-lg transition-colors"
+                >
+                  Reset
+                </button>
+              )}
+              <button
+                onClick={handleEvaluate}
+                disabled={!debateFinalResponse || !chatFinalResponse || isEvaluating}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${
+                  debateFinalResponse && chatFinalResponse && !isEvaluating
+                    ? 'bg-stone-900 text-white hover:bg-stone-800 shadow-sm'
+                    : 'bg-stone-100 text-stone-400 cursor-not-allowed'
+                }`}
+              >
+                {isEvaluating ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <p className="text-[13px]">No chat response yet</p>
-                    <p className="text-[11px] text-stone-300 mt-1">Go to Chat tab to start a conversation</p>
-                  </div>
+                    Evaluating...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Run Evaluation
+                  </>
                 )}
-              </div>
+              </button>
             </div>
           </div>
-        </div>
+        </header>
 
-        {/* Evaluation Result */}
-        {evaluationResult && (
-          <div className="mb-8 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl border border-indigo-200 overflow-hidden">
-            <div className="px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-[14px] font-semibold text-white">Evaluation Result</h3>
-                <p className="text-[11px] text-white/70">AI-powered comparison</p>
-              </div>
-            </div>
-            <div className="p-5">
-              <div className="text-[14px] text-stone-700 leading-relaxed">{formatChatContent(evaluationResult)}</div>
-              {isEvaluating && (
-                <div className="mt-2 flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></div>
-                  <span className="text-[10px] text-indigo-500">Generating...</span>
-                </div>
-              )}
+        {/* Error message */}
+        {error && (
+          <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+            <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p className="text-[13px] font-semibold text-red-800">Evaluation failed</p>
+              <p className="text-[13px] text-red-600 mt-0.5">{error}</p>
             </div>
           </div>
         )}
-        <div className="h-12" />
+
+        {/* Responses Under Comparison */}
+        <section className="mb-10">
+          <div className="flex items-center gap-2 mb-4">
+            <h2 className="text-[11px] font-semibold text-stone-400 uppercase tracking-widest">Responses Under Comparison</h2>
+            <div className="flex-1 h-px bg-stone-200" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            {/* Response A (Debate) */}
+            <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
+              <div className="px-5 py-4 border-b border-stone-100 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm">
+                    <span className="text-white font-bold text-[12px]">A</span>
+                  </div>
+                  <div>
+                    <h3 className="text-[14px] font-semibold text-stone-800">Debate Outcome</h3>
+                    <p className="text-[11px] text-stone-400">Multi-agent synthesis</p>
+                  </div>
+                </div>
+                {debateFinalResponse && (
+                  <span className="text-[10px] text-stone-400 bg-stone-100 px-2 py-1 rounded font-medium">
+                    {debateFinalResponse.length.toLocaleString()} chars
+                  </span>
+                )}
+              </div>
+              <div className="p-5 max-h-[280px] overflow-y-auto">
+                {debateFinalResponse ? (
+                  <div className="text-[13px] text-stone-600 leading-[1.7] whitespace-pre-wrap font-[system-ui]">
+                    {debateFinalResponse.slice(0, 1200)}
+                    {debateFinalResponse.length > 1200 && (
+                      <span className="text-stone-400">... [{(debateFinalResponse.length - 1200).toLocaleString()} more chars]</span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center mb-3">
+                      <svg className="w-6 h-6 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                    </div>
+                    <p className="text-[13px] font-medium text-stone-500">No debate response</p>
+                    <p className="text-[12px] text-stone-400 mt-0.5">Complete a debate first</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Response B (Chat) */}
+            <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
+              <div className="px-5 py-4 border-b border-stone-100 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-sm">
+                    <span className="text-white font-bold text-[12px]">B</span>
+                  </div>
+                  <div>
+                    <h3 className="text-[14px] font-semibold text-stone-800">Chat Response</h3>
+                    <p className="text-[11px] text-stone-400">Single-shot generation</p>
+                  </div>
+                </div>
+                {chatFinalResponse && (
+                  <span className="text-[10px] text-stone-400 bg-stone-100 px-2 py-1 rounded font-medium">
+                    {chatFinalResponse.length.toLocaleString()} chars
+                  </span>
+                )}
+              </div>
+              <div className="p-5 max-h-[280px] overflow-y-auto">
+                {chatFinalResponse ? (
+                  <div className="text-[13px] text-stone-600 leading-[1.7] whitespace-pre-wrap font-[system-ui]">
+                    {chatFinalResponse.slice(0, 1200)}
+                    {chatFinalResponse.length > 1200 && (
+                      <span className="text-stone-400">... [{(chatFinalResponse.length - 1200).toLocaleString()} more chars]</span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center mb-3">
+                      <svg className="w-6 h-6 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+                      </svg>
+                    </div>
+                    <p className="text-[13px] font-medium text-stone-500">No chat response</p>
+                    <p className="text-[12px] text-stone-400 mt-0.5">Start a conversation in the Chat tab</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Evaluation Results */}
+        {evaluationResult && (
+          <>
+            {/* Usage Stats */}
+            {usageStats && (
+              <section className="mb-6">
+                <UsageStats usage={usageStats} />
+              </section>
+            )}
+
+            {/* Score Quick Comparison */}
+            <section className="mb-8">
+              <ScoreComparison evaluation={evaluationResult} />
+            </section>
+
+            {/* Verdict Card */}
+            <section className="mb-10">
+              <WinnerShowcase 
+                evaluation={evaluationResult}
+                responseALabel="Debate Outcome"
+                responseBLabel="Chat Response"
+              />
+            </section>
+
+            {/* Criteria Breakdown */}
+            <section className="mb-10">
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-[11px] font-semibold text-stone-400 uppercase tracking-widest">Criteria Analysis</h2>
+                  <div className="flex-1 h-px bg-stone-200 w-24" />
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={collapseAll}
+                    className="px-3 py-1.5 text-[11px] font-medium text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-md transition-colors"
+                  >
+                    Collapse
+                  </button>
+                  <span className="text-stone-200">|</span>
+                  <button
+                    onClick={expandAll}
+                    className="px-3 py-1.5 text-[11px] font-medium text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-md transition-colors"
+                  >
+                    Expand All
+                  </button>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                {(Object.keys(evaluationResult.criteria_scores) as Array<keyof EvaluationResult['criteria_scores']>).map((key) => (
+                  <CriterionCard
+                    key={key}
+                    criterionKey={key}
+                    data={evaluationResult.criteria_scores[key]}
+                    isExpanded={expandedCriteria.includes(key)}
+                    onToggle={() => toggleCriterion(key)}
+                  />
+                ))}
+              </div>
+            </section>
+          </>
+        )}
+
+        {/* Loading State */}
+        {isEvaluating && (
+          <div className="bg-white rounded-2xl border border-stone-200 p-12">
+            <div className="flex flex-col items-center justify-center">
+              <div className="relative mb-6">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+                  <svg className="w-8 h-8 text-white animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+                  </svg>
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm border border-stone-200">
+                  <svg className="w-4 h-4 text-indigo-500 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                </div>
+              </div>
+              <h3 className="text-[16px] font-semibold text-stone-800 mb-1">Analyzing Responses</h3>
+              <p className="text-[13px] text-stone-500 text-center max-w-sm">
+                Evaluating both responses across 7 weighted criteria. This typically takes 10-15 seconds.
+              </p>
+              
+              {/* Progress indicators */}
+              <div className="mt-6 flex items-center gap-2">
+                {[0, 1, 2].map((i) => (
+                  <div 
+                    key={i}
+                    className="w-2 h-2 rounded-full bg-indigo-500 animate-bounce"
+                    style={{ animationDelay: `${i * 0.15}s` }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Empty state when no evaluation yet */}
+        {!evaluationResult && !isEvaluating && debateFinalResponse && chatFinalResponse && (
+          <div className="bg-white rounded-2xl border border-dashed border-stone-300 p-12">
+            <div className="flex flex-col items-center justify-center text-center">
+              <div className="w-14 h-14 rounded-xl bg-stone-100 flex items-center justify-center mb-4">
+                <svg className="w-7 h-7 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+                </svg>
+              </div>
+              <h3 className="text-[15px] font-semibold text-stone-700 mb-1">Ready to Compare</h3>
+              <p className="text-[13px] text-stone-500 max-w-sm mb-4">
+                Both responses are loaded. Click &quot;Run Evaluation&quot; to analyze and compare them across multiple criteria.
+              </p>
+              <button
+                onClick={handleEvaluate}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold bg-stone-900 text-white hover:bg-stone-800 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                Run Evaluation
+              </button>
+            </div>
+          </div>
+        )}
+        
+        <div className="h-16" />
       </div>
     </main>
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function TranscriptViewer({ messages, fileName, onReset, projectId, projectName, onBackToProjects }: TranscriptViewerProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
-  // Use a ref to track searchParams to avoid infinite loops in updateUrl
-  const searchParamsRef = useRef(searchParams);
-  searchParamsRef.current = searchParams;
   
   // Read tab from URL, default to 'debate'
   const tabFromUrl = searchParams.get('tab') as ViewTab | null;
@@ -1785,12 +2756,13 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
   const {
     evaluation: savedEvaluation,
     saveEvaluation,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     clearEvaluation,
   } = useProjectEvaluation(projectId);
 
-  // Update URL when state changes (uses ref to avoid dependency on searchParams)
+  // Update URL when state changes
   const updateUrl = useCallback((params: { tab?: ViewTab; filter?: ParticipantRole | 'all'; q?: string }) => {
-    const newParams = new URLSearchParams(searchParamsRef.current.toString());
+    const newParams = new URLSearchParams(searchParams.toString());
     
     if (params.tab !== undefined) {
       if (params.tab === 'debate') {
@@ -1818,7 +2790,7 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
     
     const queryString = newParams.toString();
     router.push(queryString ? `?${queryString}` : '/', { scroll: false });
-  }, [router]);
+  }, [router, searchParams]);
 
   // Wrapped setters that also update URL
   const setActiveTab = useCallback((tab: ViewTab) => {
@@ -1844,22 +2816,28 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
     return () => clearTimeout(timer);
   }, [searchQuery, updateUrl]);
 
-  // Sync state from URL on mount and when URL changes
+  // Sync state from URL on initial mount only
+  // Using ref to track if initial sync has happened to avoid re-renders
+  const initialSyncDone = useRef(false);
   useEffect(() => {
+    if (initialSyncDone.current) return;
+    initialSyncDone.current = true;
+    
     const tab = searchParams.get('tab') as ViewTab | null;
     const f = searchParams.get('filter') as ParticipantRole | 'all' | null;
     const q = searchParams.get('q');
     
-    if (tab && ['debate', 'chat', 'evaluation'].includes(tab)) {
+    if (tab && ['debate', 'chat', 'evaluation'].includes(tab) && tab !== activeTab) {
       setActiveTabState(tab);
     }
-    if (f && ['all', 'user', 'moderator', 'claude', 'gpt'].includes(f)) {
+    if (f && ['all', 'user', 'moderator', 'claude', 'gpt'].includes(f) && f !== filter) {
       setFilterState(f);
     }
-    if (q !== null) {
+    if (q !== null && q !== searchQuery) {
       setSearchQueryState(q);
     }
-  }, [searchParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -2075,20 +3053,18 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
         )}
       </header>
 
-      {/* Content - All tabs rendered but hidden when inactive to preserve state */}
-      <main 
-        ref={scrollRef} 
-        className={`flex-1 overflow-y-auto ${activeTab !== 'debate' ? 'hidden' : ''}`}
-      >
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
-          {groupedMessages.map((group, gi) => (
-            <section key={gi}>
-              <div className="flex items-center gap-4 my-8 first:mt-0">
-                <div className="h-px flex-1 bg-stone-200" />
-                <time className="text-[12px] font-medium text-stone-400 tracking-wide uppercase">{group.date}</time>
-                <div className="h-px flex-1 bg-stone-200" />
-              </div>
-              <div className="space-y-4">
+      {/* Content */}
+      {activeTab === 'debate' && (
+        <main ref={scrollRef} className="flex-1 overflow-y-auto">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
+            {groupedMessages.map((group, gi) => (
+              <section key={gi}>
+                <div className="flex items-center gap-4 my-8 first:mt-0">
+                  <div className="h-px flex-1 bg-stone-200" />
+                  <time className="text-[12px] font-medium text-stone-400 tracking-wide uppercase">{group.date}</time>
+                  <div className="h-px flex-1 bg-stone-200" />
+                </div>
+                <div className="space-y-4">
                   {group.messages.map((msg, mi) => (
                     <ChatMessage key={`${msg.timestamp}-${mi}`} message={msg} />
                   ))}
@@ -2114,9 +3090,10 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
             <div className="h-12" />
           </div>
         </main>
+      )}
 
-      {/* CHAT TAB - Always rendered, hidden when inactive to preserve streaming state */}
-      <div className={activeTab !== 'chat' ? 'hidden' : 'flex-1 flex flex-col'}>
+      {/* CHAT TAB - Context selection + Chat with OpenAI */}
+      {activeTab === 'chat' && (
         <ChatTab 
           messages={messages} 
           fileName={fileName} 
@@ -2125,10 +3102,10 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
           projectId={projectId}
           onClearChat={clearChat}
         />
-      </div>
+      )}
 
-      {/* EVALUATION TAB - Always rendered, hidden when inactive to preserve streaming state */}
-      <div className={activeTab !== 'evaluation' ? 'hidden' : 'flex-1 flex flex-col'}>
+      {/* EVALUATION TAB */}
+      {activeTab === 'evaluation' && (
         <EvaluationTab 
           messages={messages} 
           chatMessages={chatMessages} 
@@ -2136,7 +3113,7 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
           savedEvaluation={savedEvaluation}
           onSaveEvaluation={saveEvaluation}
         />
-      </div>
+      )}
 
       {/* Scroll to top - only on debate/evaluation tabs */}
       {showScrollTop && activeTab !== 'chat' && (
