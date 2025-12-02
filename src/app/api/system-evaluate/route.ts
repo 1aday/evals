@@ -34,11 +34,19 @@ You will be given:
 
 Your job: Evaluate the **system's performance** on 10 criteria.
 
+ABOUT THE DEBATE SYSTEM:
+- **Gordon** and **Catherine** are the AI debaters
+- **Maude** is the AI moderator who guides the debate
+- ALL agents have **web search access** - their knowledge is NOT limited to training cutoffs
+- They can look up current information, verify facts, and cite sources
+- Therefore, factual errors are NOT excusable as "outdated training data"
+
 IMPORTANT:
 - Evaluate the SYSTEM as a whole, not individual agents.
 - Focus purely on technical quality, correctness, and usefulness.
 - Judge based on evidence from the transcript.
 - Be harsh on real problems, generous on genuine strengths.
+- **USE WEB SEARCH** to verify factual claims made in the debate. If agents made incorrect claims that could have been verified, penalize them.
 
 ---
 
@@ -65,10 +73,11 @@ Score each on a 1-10 scale:
 2) TECHNICAL ACCURACY (technical_accuracy) — Weight: 2.0
    Are the facts, logic, and technical claims correct?
    
-   - Factual correctness of claims
+   - Factual correctness of claims (USE WEB SEARCH to verify key facts)
    - Sound logical reasoning (no contradictions)
    - Correct calculations or estimates
    - Technically sound recommendations
+   - Since agents have web search, factual errors are inexcusable
 
 3) FINAL OUTPUT QUALITY (final_output_quality) — Weight: 2.0
    How good is the final deliverable?
@@ -257,8 +266,8 @@ const systemEvaluationSchema = {
 function formatTranscript(messages: TranscriptMessage[]): string {
   return messages.map((msg, idx) => {
     const speaker = msg.role === 'moderator' ? 'Maude (Moderator)' 
-      : msg.role === 'claude' ? 'Catherine (Claude)'
-      : msg.role === 'gpt' ? 'Gordon (GPT)'
+      : msg.role === 'claude' ? 'Catherine'
+      : msg.role === 'gpt' ? 'Gordon'
       : 'User';
     
     // Truncate very long messages
@@ -358,10 +367,14 @@ Please evaluate this debate system according to the criteria. Provide specific e
           schema: systemEvaluationSchema,
         },
       },
+      tools: [
+        { type: 'web_search' },
+      ],
     });
 
     // Extract the text output from the response
     let evaluationContent: string | null = null;
+    let webSearchUsed = false;
 
     // Handle response output items
     for (const item of response.output) {
@@ -372,6 +385,14 @@ Please evaluate this debate system according to the criteria. Provide specific e
           }
         }
       }
+      if (item.type === 'web_search_call') {
+        webSearchUsed = true;
+      }
+    }
+    
+    // Log if web search was used
+    if (webSearchUsed) {
+      console.log('[SystemEval] Web search was used during evaluation');
     }
 
     if (!evaluationContent) {

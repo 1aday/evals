@@ -29,7 +29,7 @@ function TabAvatar({ role }: { role: ParticipantRole }) {
     claude: 'from-violet-500 to-purple-600',
     gpt: 'from-sky-400 to-blue-500',
   };
-  return <div className={`w-4 h-4 rounded-full bg-gradient-to-br ${gradients[role]} shadow-sm`} />;
+  return <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-gradient-to-br ${gradients[role]} shadow-sm`} />;
 }
 
 const roleNames: Record<ParticipantRole, string> = {
@@ -69,7 +69,7 @@ function parseMessageLinks(text: string): React.ReactNode {
           href={linkUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 px-2 py-0.5 mx-0.5 text-[11px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors border border-blue-200 hover:border-blue-300 no-underline"
+          className="inline-flex items-center gap-1 px-2 py-0.5 mx-0.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors border border-blue-200 hover:border-blue-300 no-underline"
           title={linkUrl}
         >
           <svg className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -672,11 +672,11 @@ function ChatTab({
     <div className="flex-1 flex flex-col bg-white">
       {/* Header with settings */}
       <div className="flex-shrink-0 border-b border-stone-100 bg-white">
-        <div className="max-w-4xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between gap-4">
-            {/* Model selector - subtle dropdown style */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] text-stone-400">Model:</span>
+        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3">
+          <div className="flex items-center justify-between gap-2 sm:gap-4">
+            {/* Model selector - scrollable on mobile */}
+            <div className="flex items-center gap-1.5 min-w-0 overflow-x-auto hide-scrollbar-mobile">
+              <span className="text-xs sm:text-xs text-stone-400 flex-shrink-0 hidden sm:inline">Model:</span>
               <div className="flex items-center bg-stone-50 border border-stone-200 rounded-lg p-0.5">
                 {(Object.keys(MODEL_CONFIG) as Array<keyof typeof MODEL_CONFIG>).map((model) => {
                   const config = MODEL_CONFIG[model];
@@ -685,10 +685,10 @@ function ChatTab({
                     <button
                       key={model}
                       onClick={() => setSettings(s => ({ ...s, model }))}
-                      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
+                      className={`px-2 sm:px-2.5 py-1 rounded-md text-xs sm:text-xs font-medium transition-all whitespace-nowrap btn-xs ${
                         isActive 
                           ? 'bg-white text-stone-800 shadow-sm' 
-                          : 'text-stone-400 hover:text-stone-600'
+                          : 'text-stone-400 hover:text-stone-600 active:text-stone-800'
                       }`}
                     >
                       {config.name}
@@ -699,11 +699,11 @@ function ChatTab({
             </div>
 
             {/* Right side controls */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
               {chatMessages.length > 0 && (
                 <button
                   onClick={clearChatHandler}
-                  className="px-3 py-1.5 text-[12px] text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                  className="px-2 sm:px-3 py-1.5 text-xs sm:text-sm text-stone-400 hover:text-red-500 active:text-red-600 hover:bg-red-50 rounded-lg transition-colors btn-xs"
                 >
                   Clear
                 </button>
@@ -714,45 +714,45 @@ function ChatTab({
                   setEditingPrompt(systemPrompts[settings.model] || DEFAULT_SYSTEM_PROMPTS[settings.model] || '');
                   setShowPromptEditor(true);
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all ${
+                className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all btn-xs ${
                   systemPrompts[settings.model] !== DEFAULT_SYSTEM_PROMPTS[settings.model]
                     ? 'bg-amber-50 text-amber-600 hover:bg-amber-100' 
-                    : 'text-stone-500 hover:text-stone-700 hover:bg-stone-100'
+                    : 'text-stone-500 hover:text-stone-700 active:text-stone-800 hover:bg-stone-100'
                 }`}
                 title="Edit system prompt"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5" />
                 </svg>
-                Prompt
+                <span className="hidden sm:inline">Prompt</span>
                 {systemPrompts[settings.model] !== DEFAULT_SYSTEM_PROMPTS[settings.model] && (
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                 )}
               </button>
               <button
                 onClick={() => setShowSettings(!showSettings)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all ${
+                className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all btn-xs ${
                   showSettings 
                     ? 'bg-indigo-100 text-indigo-600' 
-                    : 'text-stone-500 hover:text-stone-700 hover:bg-stone-100'
+                    : 'text-stone-500 hover:text-stone-700 active:text-stone-800 hover:bg-stone-100'
                 }`}
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                 </svg>
-                Settings
+                <span className="hidden sm:inline">Settings</span>
               </button>
             </div>
           </div>
 
           {/* Expandable settings panel */}
           {showSettings && (
-            <div className="mt-3 py-4 px-5 bg-stone-50/80 rounded-xl border border-stone-200/80">
-              <div className="flex flex-wrap items-start gap-8">
+            <div className="mt-2 sm:mt-3 py-3 sm:py-4 px-3 sm:px-5 bg-stone-50/80 rounded-xl border border-stone-200/80 animate-fade-in">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-start gap-4 sm:gap-8">
                 {/* Reasoning Effort */}
-                <div className="flex items-center gap-3">
-                  <span className="text-[11px] font-medium text-stone-500 uppercase tracking-wider whitespace-nowrap">Reasoning</span>
-                  <div className="flex items-center bg-white rounded-lg border border-stone-200 p-0.5 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                  <span className="text-xs sm:text-xs font-medium text-stone-500 uppercase tracking-wider whitespace-nowrap">Reasoning</span>
+                  <div className="flex items-center bg-white rounded-lg border border-stone-200 p-0.5 shadow-sm overflow-x-auto hide-scrollbar-mobile -mx-1 px-1 sm:mx-0 sm:px-0">
                     {(Object.keys(REASONING_CONFIG) as Array<keyof typeof REASONING_CONFIG>).map((effort) => {
                       const config = REASONING_CONFIG[effort];
                       const isActive = settings.reasoningEffort === effort;
@@ -764,15 +764,15 @@ function ChatTab({
                           onClick={() => !isDisabled && setSettings(s => ({ ...s, reasoningEffort: effort }))}
                           disabled={isDisabled}
                           title={isDisabled ? 'Only available for GPT-5.1' : config.desc}
-                          className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium transition-all ${
+                          className={`relative flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 ${
                             isDisabled 
                               ? 'opacity-25 cursor-not-allowed text-stone-400' 
                               : isActive 
                                 ? 'bg-stone-800 text-white shadow-sm' 
-                                : 'text-stone-500 hover:text-stone-700 hover:bg-stone-50'
+                                : 'text-stone-500 hover:text-stone-700 active:text-stone-800 hover:bg-stone-50'
                           }`}
                         >
-                          <span className="text-[13px]">{config.icon}</span>
+                          <span className="text-sm sm:text-sm">{config.icon}</span>
                           <span>{config.name}</span>
                         </button>
                       );
@@ -781,8 +781,8 @@ function ChatTab({
                 </div>
 
                 {/* Response Length */}
-                <div className="flex items-center gap-3">
-                  <span className="text-[11px] font-medium text-stone-500 uppercase tracking-wider whitespace-nowrap">Length</span>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                  <span className="text-xs sm:text-xs font-medium text-stone-500 uppercase tracking-wider whitespace-nowrap">Length</span>
                   <div className="flex items-center bg-white rounded-lg border border-stone-200 p-0.5 shadow-sm">
                     {[
                       { key: 'low' as const, label: 'Concise', icon: '📝' },
@@ -792,14 +792,14 @@ function ChatTab({
                       <button
                         key={key}
                         onClick={() => setSettings(s => ({ ...s, verbosity: key }))}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium transition-all ${
+                        className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all ${
                           settings.verbosity === key 
                             ? 'bg-stone-800 text-white shadow-sm' 
-                            : 'text-stone-500 hover:text-stone-700 hover:bg-stone-50'
+                            : 'text-stone-500 hover:text-stone-700 active:text-stone-800 hover:bg-stone-50'
                         }`}
                       >
-                        <span className="text-[13px]">{icon}</span>
-                        <span>{label}</span>
+                        <span className="text-sm sm:text-sm">{icon}</span>
+                        <span className="hidden xs:inline">{label}</span>
                       </button>
                     ))}
                   </div>
@@ -808,11 +808,11 @@ function ChatTab({
 
               {/* Web search incompatibility warning */}
               {settings.reasoningEffort === 'minimal' && (
-                <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-amber-50/80 border border-amber-200/60 rounded-lg">
+                <div className="mt-3 flex items-center gap-2 px-2.5 sm:px-3 py-2 bg-amber-50/80 border border-amber-200/60 rounded-lg">
                   <svg className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
-                  <span className="text-[11px] text-amber-700">Web search unavailable with Minimal reasoning</span>
+                  <span className="text-xs sm:text-xs text-amber-700">Web search unavailable with Minimal reasoning</span>
                 </div>
               )}
             </div>
@@ -835,8 +835,8 @@ function ChatTab({
                     </svg>
                   </div>
                   <div>
-                    <h3 className="text-[16px] font-semibold text-white">System Prompts</h3>
-                    <p className="text-[12px] text-white/60 mt-0.5">Customize AI behavior for each model</p>
+                    <h3 className="text-lg font-semibold text-white">System Prompts</h3>
+                    <p className="text-sm text-white/60 mt-0.5">Customize AI behavior for each model</p>
                   </div>
                 </div>
                 <button
@@ -865,7 +865,7 @@ function ChatTab({
                         setSelectedPromptModel(model);
                         setEditingPrompt(systemPrompts[model] || DEFAULT_SYSTEM_PROMPTS[model] || '');
                       }}
-                      className={`relative flex items-center gap-2 px-5 py-3.5 text-[13px] font-medium whitespace-nowrap transition-all border-b-2 ${
+                      className={`relative flex items-center gap-2 px-5 py-3.5 text-sm font-medium whitespace-nowrap transition-all border-b-2 ${
                         isActive 
                           ? 'text-stone-800 border-stone-800 bg-white' 
                           : 'text-stone-500 border-transparent hover:text-stone-700 hover:bg-stone-100'
@@ -898,10 +898,10 @@ function ChatTab({
                     </svg>
                   </div>
                   <div>
-                    <h4 className="text-[14px] font-semibold text-stone-800">
+                    <h4 className="text-base font-semibold text-stone-800">
                       {MODEL_CONFIG[selectedPromptModel as keyof typeof MODEL_CONFIG]?.name || selectedPromptModel}
                     </h4>
-                    <p className="text-[11px] text-stone-500">
+                    <p className="text-xs text-stone-500">
                       {MODEL_CONFIG[selectedPromptModel as keyof typeof MODEL_CONFIG]?.desc || 'Custom model'}
                     </p>
                   </div>
@@ -914,7 +914,7 @@ function ChatTab({
                       await resetPrompt(selectedPromptModel);
                       setEditingPrompt(DEFAULT_SYSTEM_PROMPTS[selectedPromptModel] || '');
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -926,7 +926,7 @@ function ChatTab({
 
               {/* Textarea */}
               <div className="flex-1 min-h-0 flex flex-col">
-                <label className="block text-[11px] font-semibold text-stone-500 uppercase tracking-wide mb-2">
+                <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wide mb-2">
                   System Instructions
                 </label>
                 <div className="flex-1 relative">
@@ -940,14 +940,14 @@ function ChatTab({
                       }
                     }}
                     placeholder="Enter system instructions for this model..."
-                    className="absolute inset-0 w-full h-full p-4 text-[14px] leading-relaxed text-stone-700 bg-stone-50 border border-stone-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-stone-400/30 focus:border-stone-400 placeholder:text-stone-400 font-mono"
+                    className="absolute inset-0 w-full h-full p-4 text-base leading-relaxed text-stone-700 bg-stone-50 border border-stone-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-stone-400/30 focus:border-stone-400 placeholder:text-stone-400 font-mono"
                   />
                 </div>
                 <div className="flex items-center justify-between mt-3">
-                  <span className="text-[11px] text-stone-400">
+                  <span className="text-xs text-stone-400">
                     {(editingPrompt || systemPrompts[selectedPromptModel] || '').length} characters
                   </span>
-                  <span className="text-[11px] text-stone-400 flex items-center gap-1.5">
+                  <span className="text-xs text-stone-400 flex items-center gap-1.5">
                     {promptsSynced ? (
                       <>
                         <svg className="w-3 h-3 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -973,7 +973,7 @@ function ChatTab({
 
             {/* Quick templates */}
             <div className="flex-shrink-0 border-t border-stone-200 bg-stone-50 p-4">
-              <p className="text-[11px] font-semibold text-stone-500 uppercase tracking-wide mb-3">Quick Templates</p>
+              <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-3">Quick Templates</p>
               <div className="flex flex-wrap gap-2">
                 {[
                   { label: 'Concise', icon: '📝', prompt: 'Be concise and direct. Avoid unnecessary words. Get to the point quickly.' },
@@ -988,7 +988,7 @@ function ChatTab({
                       setEditingPrompt(template.prompt);
                       await savePrompt(selectedPromptModel, template.prompt);
                     }}
-                    className="flex items-center gap-1.5 px-3 py-2 text-[12px] font-medium text-stone-600 bg-white border border-stone-200 rounded-lg hover:border-stone-300 hover:bg-stone-50 transition-all"
+                    className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-stone-600 bg-white border border-stone-200 rounded-lg hover:border-stone-300 hover:bg-stone-50 transition-all"
                   >
                     <span>{template.icon}</span>
                     {template.label}
@@ -1007,7 +1007,7 @@ function ChatTab({
                   }
                   setShowPromptEditor(false);
                 }}
-                className="w-full py-3.5 px-4 bg-gradient-to-r from-stone-800 to-stone-900 hover:from-stone-900 hover:to-black text-white text-[14px] font-bold rounded-xl transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full py-3.5 px-4 bg-gradient-to-r from-stone-800 to-stone-900 hover:from-stone-900 hover:to-black text-white text-base font-bold rounded-xl transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
               >
                 Done
               </button>
@@ -1025,8 +1025,8 @@ function ChatTab({
             <div className="flex-shrink-0 p-4 border-b border-stone-200 bg-gradient-to-r from-indigo-500 to-purple-600">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-[15px] font-semibold text-white">Select Context</h3>
-                  <p className="text-[12px] text-white/70 mt-0.5">Choose messages to include</p>
+                  <h3 className="text-base font-semibold text-white">Select Context</h3>
+                  <p className="text-sm text-white/70 mt-0.5">Choose messages to include</p>
                 </div>
                 <button
                   onClick={() => setShowContextPanel(false)}
@@ -1042,13 +1042,13 @@ function ChatTab({
               <div className="flex gap-2 mt-3">
                 <button
                   onClick={selectAllMessages}
-                  className="flex-1 py-2 px-3 text-[12px] font-medium text-white bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
+                  className="flex-1 py-2 px-3 text-sm font-medium text-white bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
                 >
                   Select All ({userMessages.length})
                 </button>
                 <button
                   onClick={clearAllMessages}
-                  className="flex-1 py-2 px-3 text-[12px] font-medium text-white bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
+                  className="flex-1 py-2 px-3 text-sm font-medium text-white bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
                 >
                   Clear All
                 </button>
@@ -1058,11 +1058,11 @@ function ChatTab({
             {/* Selection summary */}
             <div className="flex-shrink-0 px-4 py-3 bg-stone-50 border-b border-stone-200">
               <div className="flex items-center justify-between">
-                <span className="text-[13px] text-stone-600">
+                <span className="text-sm text-stone-600">
                   <span className="font-semibold text-indigo-600">{attachedMessages.length}</span> of {userMessages.length} messages selected
                 </span>
                 {attachedMessages.length > 0 && (
-                  <span className="text-[11px] text-stone-400">
+                  <span className="text-xs text-stone-400">
                     ~{attachedMessages.reduce((acc, idx) => acc + messages[idx].content.length, 0).toLocaleString()} chars
                   </span>
                 )}
@@ -1076,7 +1076,7 @@ function ChatTab({
                   <svg className="w-12 h-12 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
-                  <p className="text-[13px]">No user messages found</p>
+                  <p className="text-sm">No user messages found</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -1106,26 +1106,26 @@ function ChatTab({
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                               </svg>
                             ) : (
-                              <span className="text-[11px] font-bold text-stone-400 group-hover:text-violet-500">{i + 1}</span>
+                              <span className="text-xs font-bold text-stone-400 group-hover:text-violet-500">{i + 1}</span>
                             )}
                           </div>
                           
                           {/* Content */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1.5">
-                              <span className={`text-[11px] font-bold ${isSelected ? 'text-violet-600' : 'text-stone-500'}`}>
+                              <span className={`text-xs font-bold ${isSelected ? 'text-violet-600' : 'text-stone-500'}`}>
                                 Message #{i + 1}
                               </span>
-                              <span className="text-[10px] text-stone-400">•</span>
-                              <span className="text-[10px] text-stone-400">{msg.content.length} chars</span>
+                              <span className="text-xs text-stone-400">•</span>
+                              <span className="text-xs text-stone-400">{msg.content.length} chars</span>
                               {msg.metadata?.turn && (
                                 <>
-                                  <span className="text-[10px] text-stone-400">•</span>
-                                  <span className="text-[10px] text-stone-400">Turn {msg.metadata.turn}</span>
+                                  <span className="text-xs text-stone-400">•</span>
+                                  <span className="text-xs text-stone-400">Turn {msg.metadata.turn}</span>
                                 </>
                               )}
                             </div>
-                            <p className={`text-[13px] leading-relaxed ${isSelected ? 'text-violet-900' : 'text-stone-600'}`}>
+                            <p className={`text-sm leading-relaxed ${isSelected ? 'text-violet-900' : 'text-stone-600'}`}>
                               {preview}
                             </p>
                           </div>
@@ -1141,11 +1141,11 @@ function ChatTab({
             <div className="flex-shrink-0 p-4 border-t border-stone-200 bg-gradient-to-t from-stone-100 to-stone-50">
               <button
                 onClick={() => setShowContextPanel(false)}
-                className="w-full py-3.5 px-4 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white text-[14px] font-bold rounded-xl transition-all shadow-lg shadow-violet-500/30 hover:shadow-xl hover:shadow-violet-500/40 hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full py-3.5 px-4 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white text-base font-bold rounded-xl transition-all shadow-lg shadow-violet-500/30 hover:shadow-xl hover:shadow-violet-500/40 hover:scale-[1.02] active:scale-[0.98]"
               >
                 {attachedMessages.length > 0 ? `Done · ${attachedMessages.length} selected` : 'Done'}
               </button>
-              <p className="text-[10px] text-stone-400 text-center mt-2.5 font-medium">
+              <p className="text-xs text-stone-400 text-center mt-2.5 font-medium">
                 Source: {fileName}
               </p>
             </div>
@@ -1168,7 +1168,7 @@ function ChatTab({
               </svg>
             </div>
             <h2 className="text-2xl font-semibold text-stone-800 mb-2">Chat with OpenAI</h2>
-            <p className="text-[15px] text-stone-500 text-center max-w-md mb-8">
+            <p className="text-base text-stone-500 text-center max-w-md mb-8">
               Ask questions about your transcript. Attach user messages as context for more relevant responses.
             </p>
             
@@ -1178,7 +1178,7 @@ function ChatTab({
                 <button
                   key={suggestion}
                   onClick={() => handleQuickPrompt(suggestion)}
-                  className="px-4 py-2 text-[13px] font-medium text-stone-600 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-stone-600 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors"
                 >
                   {suggestion}
                 </button>
@@ -1193,7 +1193,7 @@ function ChatTab({
               <div className="sticky top-2 z-10 flex justify-center mb-4">
                 <button
                   onClick={scrollToBottom}
-                  className="flex items-center gap-2 px-4 py-2 bg-white/95 backdrop-blur-sm border border-stone-200 rounded-full shadow-lg hover:shadow-xl hover:bg-white transition-all text-[13px] font-medium text-stone-600 hover:text-stone-800"
+                  className="flex items-center gap-2 px-4 py-2 bg-white/95 backdrop-blur-sm border border-stone-200 rounded-full shadow-lg hover:shadow-xl hover:bg-white transition-all text-sm font-medium text-stone-600 hover:text-stone-800"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
@@ -1253,10 +1253,10 @@ function ChatTab({
                         </div>
                         
                         <div className="flex-1">
-                          <p className="text-[13px] font-semibold text-white">
+                          <p className="text-sm font-semibold text-white">
                             {msg.searchStatus.searching ? 'Searching the web...' : 'Web search complete'}
                           </p>
-                          <p className="text-[11px] text-white/80">
+                          <p className="text-xs text-white/80">
                             {msg.searchStatus.searching 
                               ? 'Finding and reading sources' 
                               : `Found ${msg.searchStatus.sources?.length || 0} relevant sources`
@@ -1268,7 +1268,7 @@ function ChatTab({
                         {msg.searchStatus.searching && (
                           <div className="flex items-center gap-1.5 px-2 py-1 bg-white/20 rounded-full">
                             <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                            <span className="text-[10px] font-medium text-white uppercase tracking-wide">Live</span>
+                            <span className="text-xs font-medium text-white uppercase tracking-wide">Live</span>
                           </div>
                         )}
                       </div>
@@ -1304,15 +1304,15 @@ function ChatTab({
                                         (e.target as HTMLImageElement).style.display = 'none';
                                       }}
                                     />
-                                    <span className="text-[10px] font-bold text-emerald-600 absolute">{idx + 1}</span>
+                                    <span className="text-xs font-bold text-emerald-600 absolute">{idx + 1}</span>
                                   </div>
                                   
                                   {/* Content */}
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-[12px] font-medium text-stone-800 truncate group-hover:text-emerald-700 transition-colors">
+                                    <p className="text-sm font-medium text-stone-800 truncate group-hover:text-emerald-700 transition-colors">
                                       {source.title || hostname}
                                     </p>
-                                    <p className="text-[10px] text-stone-400 truncate">
+                                    <p className="text-xs text-stone-400 truncate">
                                       {hostname}
                                     </p>
                                   </div>
@@ -1328,7 +1328,7 @@ function ChatTab({
                           
                           {/* Show more indicator */}
                           {msg.searchStatus.sources.length > 6 && (
-                            <p className="text-[10px] text-stone-400 text-center mt-2">
+                            <p className="text-xs text-stone-400 text-center mt-2">
                               +{msg.searchStatus.sources.length - 6} more sources
                             </p>
                           )}
@@ -1345,15 +1345,15 @@ function ChatTab({
                           <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                           </svg>
-                          <span className="text-[11px] font-semibold text-amber-700 uppercase tracking-wide">Reasoning</span>
-                          <span className="text-[10px] text-amber-500 font-normal normal-case">({msg.thinking.length} chars)</span>
+                          <span className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Reasoning</span>
+                          <span className="text-xs text-amber-500 font-normal normal-case">({msg.thinking.length} chars)</span>
                           <svg className="w-3 h-3 text-amber-500 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                           </svg>
                         </div>
                       </summary>
                       <div className="mt-2 p-3 bg-amber-50/50 border border-amber-100 rounded-lg">
-                        <p className="text-[12px] text-amber-800 leading-relaxed whitespace-pre-wrap font-mono">{msg.thinking}</p>
+                        <p className="text-sm text-amber-800 leading-relaxed whitespace-pre-wrap font-mono">{msg.thinking}</p>
                       </div>
                     </details>
                   )}
@@ -1366,7 +1366,7 @@ function ChatTab({
                         <textarea
                           value={editingContent}
                           onChange={(e) => setEditingContent(e.target.value)}
-                          className="w-full px-4 py-3 text-[14px] leading-relaxed bg-white border-2 border-indigo-300 rounded-2xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 resize-none min-h-[80px] text-stone-700"
+                          className="w-full px-4 py-3 text-base leading-relaxed bg-white border-2 border-indigo-300 rounded-2xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 resize-none min-h-[80px] text-stone-700"
                           autoFocus
                           onKeyDown={(e) => {
                             if (e.key === 'Escape') {
@@ -1380,14 +1380,14 @@ function ChatTab({
                       <div className="flex items-center gap-2 mt-2 justify-end">
                         <button
                           onClick={cancelEditMessage}
-                          className="px-3 py-1.5 text-[12px] font-medium text-stone-500 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition-colors"
+                          className="px-3 py-1.5 text-sm font-medium text-stone-500 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition-colors"
                         >
                           Cancel
                         </button>
                         <button
                           onClick={saveEditAndRerun}
                           disabled={!editingContent.trim() || isLoading}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -1395,7 +1395,7 @@ function ChatTab({
                           Save & Re-run
                         </button>
                       </div>
-                      <p className="text-[10px] text-stone-400 mt-1.5 text-right">
+                      <p className="text-xs text-stone-400 mt-1.5 text-right">
                         <kbd className="px-1.5 py-0.5 bg-stone-100 rounded text-[9px] font-mono">⌘</kbd>+<kbd className="px-1.5 py-0.5 bg-stone-100 rounded text-[9px] font-mono">Enter</kbd> to save • <kbd className="px-1.5 py-0.5 bg-stone-100 rounded text-[9px] font-mono">Esc</kbd> to cancel
                       </p>
                     </div>
@@ -1408,7 +1408,7 @@ function ChatTab({
                           : 'bg-stone-100 text-stone-700 rounded-2xl rounded-tl-md'
                       } px-4 py-3 shadow-sm`}>
                         {msg.content ? (
-                          <div className="text-[14px] leading-relaxed">
+                          <div className="text-base leading-relaxed">
                             {msg.role === 'assistant' ? formatChatContent(msg.content) : <span className="whitespace-pre-wrap">{msg.content}</span>}
                           </div>
                         ) : msg.isStreaming ? (
@@ -1419,7 +1419,7 @@ function ChatTab({
                                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
                                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                                 </svg>
-                                <span className="text-[13px]">Searching web...</span>
+                                <span className="text-sm">Searching web...</span>
                               </div>
                             ) : (
                               <div className="flex gap-1.5 items-center">
@@ -1471,7 +1471,7 @@ function ChatTab({
                           <svg className="w-3.5 h-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                           </svg>
-                          <span className="text-[11px] font-medium text-blue-700">{validCitations.length} citation{validCitations.length > 1 ? 's' : ''}</span>
+                          <span className="text-xs font-medium text-blue-700">{validCitations.length} citation{validCitations.length > 1 ? 's' : ''}</span>
                           <svg className="w-3 h-3 text-blue-500 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                           </svg>
@@ -1485,12 +1485,12 @@ function ChatTab({
                               rel="noopener noreferrer"
                               className="flex items-center gap-2 p-2 bg-white border border-stone-200 rounded-lg hover:border-blue-300 hover:bg-blue-50/50 transition-colors"
                             >
-                              <div className="w-5 h-5 rounded bg-blue-100 flex items-center justify-center text-[10px] font-semibold text-blue-600">
+                              <div className="w-5 h-5 rounded bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-600">
                                 {idx + 1}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-[12px] font-medium text-stone-700 truncate">{citation.title || 'Source'}</p>
-                                <p className="text-[10px] text-stone-400 truncate">{citation.url}</p>
+                                <p className="text-sm font-medium text-stone-700 truncate">{citation.title || 'Source'}</p>
+                                <p className="text-xs text-stone-400 truncate">{citation.url}</p>
                               </div>
                               <svg className="w-4 h-4 text-stone-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -1506,7 +1506,7 @@ function ChatTab({
                   {msg.isStreaming && msg.content && (
                     <div className="mt-1 flex items-center gap-1">
                       <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></div>
-                      <span className="text-[10px] text-stone-400">Generating...</span>
+                      <span className="text-xs text-stone-400">Generating...</span>
                     </div>
                   )}
                 </div>
@@ -1518,61 +1518,61 @@ function ChatTab({
       </div>
 
       {/* Input area with attachments */}
-      <div className="flex-shrink-0 border-t border-stone-100 bg-gradient-to-t from-stone-50 to-white">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4">
+      <div className="flex-shrink-0 border-t border-stone-100 bg-gradient-to-t from-stone-50 to-white safe-bottom">
+        <div className="max-w-3xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
           {/* Attached messages preview */}
           {attachedMessages.length > 0 && (
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-2.5">
+            <div className="mb-3 sm:mb-4">
+              <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1.5 px-2 py-1 bg-gradient-to-r from-violet-500 to-purple-600 rounded-lg">
-                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <div className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-1 bg-gradient-to-r from-violet-500 to-purple-600 rounded-lg">
+                    <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
                     </svg>
-                    <span className="text-[11px] font-bold text-white">{attachedMessages.length}</span>
+                    <span className="text-xs sm:text-xs font-bold text-white">{attachedMessages.length}</span>
                   </div>
-                  <span className="text-[12px] font-medium text-stone-600">
+                  <span className="text-xs sm:text-sm font-medium text-stone-600">
                     Context attached
                   </span>
                 </div>
                 <button
                   onClick={() => setShowContextPanel(true)}
-                  className="text-[11px] font-semibold text-violet-600 hover:text-violet-700 hover:underline"
+                  className="text-xs sm:text-xs font-semibold text-violet-600 hover:text-violet-700 active:text-violet-800 hover:underline py-1"
                 >
                   Edit
                 </button>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {attachedMessages.slice(0, 4).map((msgIndex, i) => {
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                {attachedMessages.slice(0, 3).map((msgIndex, i) => {
                   const msg = messages[msgIndex];
-                  const preview = msg.content.slice(0, 35) + (msg.content.length > 35 ? '...' : '');
+                  const preview = msg.content.slice(0, 25) + (msg.content.length > 25 ? '...' : '');
                   return (
                     <div
                       key={msgIndex}
-                      className="group flex items-center gap-2 pl-3 pr-2 py-1.5 bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200/60 rounded-xl hover:border-violet-300 hover:shadow-sm transition-all"
+                      className="group flex items-center gap-1.5 sm:gap-2 pl-2 sm:pl-3 pr-1.5 sm:pr-2 py-1 sm:py-1.5 bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200/60 rounded-lg sm:rounded-xl hover:border-violet-300 active:bg-violet-100 transition-all"
                     >
-                      <div className="flex items-center justify-center w-5 h-5 rounded-md bg-gradient-to-br from-violet-500 to-purple-600 shadow-sm">
-                        <span className="text-[10px] font-bold text-white">{i + 1}</span>
+                      <div className="flex items-center justify-center w-4 h-4 sm:w-5 sm:h-5 rounded-md bg-gradient-to-br from-violet-500 to-purple-600 shadow-sm flex-shrink-0">
+                        <span className="text-[9px] sm:text-xs font-bold text-white">{i + 1}</span>
                       </div>
-                      <span className="text-[12px] text-violet-800 max-w-[160px] truncate font-medium">{preview}</span>
+                      <span className="text-xs sm:text-sm text-violet-800 max-w-[100px] sm:max-w-[160px] truncate font-medium">{preview}</span>
                       <button
                         onClick={() => removeMessage(msgIndex)}
-                        className="p-1 text-violet-400 hover:text-white hover:bg-violet-500 rounded-md transition-all"
+                        className="p-0.5 sm:p-1 text-violet-400 hover:text-white active:text-white hover:bg-violet-500 active:bg-violet-600 rounded-md transition-all"
                       >
-                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                       </button>
                     </div>
                   );
                 })}
-                {attachedMessages.length > 4 && (
+                {attachedMessages.length > 3 && (
                   <button
                     onClick={() => setShowContextPanel(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-violet-600 bg-violet-100 border border-violet-200 rounded-xl hover:bg-violet-200 transition-all"
+                    className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-semibold text-violet-600 bg-violet-100 border border-violet-200 rounded-lg sm:rounded-xl hover:bg-violet-200 active:bg-violet-300 transition-all"
                   >
-                    <span>+{attachedMessages.length - 4} more</span>
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <span>+{attachedMessages.length - 3} more</span>
+                    <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
                   </button>
@@ -1583,35 +1583,35 @@ function ChatTab({
 
           {/* Input box */}
           <div className="relative">
-            <div className="flex items-end gap-2 bg-white border border-stone-200 rounded-2xl pl-3 pr-2 py-2 focus-within:border-indigo-300 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all shadow-sm">
+            <div className="flex items-end gap-1.5 sm:gap-2 bg-white border border-stone-200 rounded-xl sm:rounded-2xl pl-2 sm:pl-3 pr-1.5 sm:pr-2 py-1.5 sm:py-2 focus-within:border-indigo-300 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all shadow-sm">
               {/* Context button */}
               <button
                 onClick={() => setShowContextPanel(true)}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-all ${
+                className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg sm:rounded-xl transition-all btn-xs ${
                   attachedMessages.length > 0
                     ? 'bg-indigo-100 text-indigo-600'
-                    : 'text-stone-400 hover:text-stone-600 hover:bg-stone-100'
+                    : 'text-stone-400 hover:text-stone-600 active:text-stone-700 hover:bg-stone-100'
                 }`}
                 title="Add context from transcript"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
                 </svg>
                 {attachedMessages.length > 0 && (
-                  <span className="text-[11px] font-semibold">{attachedMessages.length}</span>
+                  <span className="text-xs sm:text-xs font-semibold">{attachedMessages.length}</span>
                 )}
               </button>
 
-              {/* Web Search toggle */}
+              {/* Web Search toggle - hidden on very small screens */}
               <button
                 onClick={() => !isWebSearchDisabled && setSettings(s => ({ ...s, webSearch: !s.webSearch }))}
                 disabled={isWebSearchDisabled}
-                className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${
+                className={`hidden xs:flex relative items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg sm:rounded-xl transition-all btn-xs ${
                   isWebSearchDisabled
                     ? 'opacity-50 cursor-not-allowed text-stone-300 border border-stone-200 bg-stone-50'
                     : settings.webSearch
                       ? 'bg-gradient-to-r from-sky-500 to-cyan-500 text-white shadow-md shadow-sky-500/25'
-                      : 'text-stone-400 hover:text-stone-600 hover:bg-stone-100 border border-stone-200'
+                      : 'text-stone-400 hover:text-stone-600 active:text-stone-700 hover:bg-stone-100 border border-stone-200'
                 }`}
                 title={isWebSearchDisabled 
                   ? 'Web search is not available with Minimal reasoning effort' 
@@ -1620,18 +1620,18 @@ function ChatTab({
                     : 'Web search disabled'
                 }
               >
-                <div className={`relative w-4 h-4 ${settings.webSearch && !isWebSearchDisabled ? 'animate-pulse' : ''}`} style={{ animationDuration: '3s' }}>
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={settings.webSearch && !isWebSearchDisabled ? 2.5 : 2}>
+                <div className={`relative w-3.5 h-3.5 sm:w-4 sm:h-4 ${settings.webSearch && !isWebSearchDisabled ? 'animate-pulse' : ''}`} style={{ animationDuration: '3s' }}>
+                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={settings.webSearch && !isWebSearchDisabled ? 2.5 : 2}>
                     <circle cx="12" cy="12" r="9" />
                     <ellipse cx="12" cy="12" rx="9" ry="4" />
                     <ellipse cx="12" cy="12" rx="4" ry="9" />
                   </svg>
                 </div>
                 {settings.webSearch && !isWebSearchDisabled && (
-                  <span className="text-[10px] font-bold uppercase tracking-wide">Web</span>
+                  <span className="text-[9px] sm:text-xs font-bold uppercase tracking-wide hidden sm:inline">Web</span>
                 )}
                 {isWebSearchDisabled && (
-                  <svg className="w-3 h-3 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                   </svg>
                 )}
@@ -1643,10 +1643,10 @@ function ChatTab({
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={attachedMessages.length > 0 ? "Add a question, or just send to analyze..." : "Message GPT-5..."}
+                placeholder={attachedMessages.length > 0 ? "Add a question..." : "Message..."}
                 rows={1}
                 disabled={isLoading}
-                className="flex-1 bg-transparent text-[15px] text-stone-700 placeholder:text-stone-400 resize-none focus:outline-none min-h-[28px] max-h-[200px] py-1 disabled:opacity-50"
+                className="flex-1 bg-transparent text-base sm:text-base text-stone-700 placeholder:text-stone-400 resize-none focus:outline-none min-h-[24px] sm:min-h-[28px] max-h-[150px] sm:max-h-[200px] py-1 disabled:opacity-50"
                 onInput={(e) => {
                   const target = e.target as HTMLTextAreaElement;
                   target.style.height = 'auto';
@@ -1658,39 +1658,39 @@ function ChatTab({
               <button
                 onClick={handleSend}
                 disabled={(!inputValue.trim() && attachedMessages.length === 0) || isLoading}
-                className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
+                className={`flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center transition-all btn-press ${
                   (inputValue.trim() || attachedMessages.length > 0) && !isLoading
-                    ? `bg-gradient-to-r ${MODEL_CONFIG[settings.model].color} text-white shadow-lg`
+                    ? `bg-gradient-to-r ${MODEL_CONFIG[settings.model].color} text-white shadow-lg active:scale-95`
                     : 'bg-stone-100 text-stone-400 cursor-not-allowed'
                 }`}
               >
                 {isLoading ? (
-                  <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
                 ) : (
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
                   </svg>
                 )}
               </button>
             </div>
 
-            {/* Helper text */}
-            <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
-              <span className="text-[10px] text-stone-400">
+            {/* Helper text - simplified on mobile */}
+            <div className="flex items-center justify-center gap-1.5 sm:gap-2 mt-1.5 sm:mt-2 flex-wrap">
+              <span className="text-[9px] sm:text-xs text-stone-400">
                 {MODEL_CONFIG[settings.model].name}
               </span>
-              <span className="text-[10px] text-stone-300">•</span>
-              <span className="text-[10px] text-stone-400">
-                {REASONING_CONFIG[settings.reasoningEffort].icon} {REASONING_CONFIG[settings.reasoningEffort].name}
+              <span className="text-[9px] sm:text-xs text-stone-300">•</span>
+              <span className="text-[9px] sm:text-xs text-stone-400">
+                {REASONING_CONFIG[settings.reasoningEffort].icon}
               </span>
               {settings.webSearch && (
                 <>
-                  <span className="text-[10px] text-stone-300">•</span>
-                  <span className="text-[10px] text-sky-500 flex items-center gap-1">
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <span className="text-[9px] sm:text-xs text-stone-300 hidden sm:inline">•</span>
+                  <span className="text-[9px] sm:text-xs text-sky-500 hidden sm:flex items-center gap-1">
+                    <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                     </svg>
                     Web
@@ -1699,24 +1699,24 @@ function ChatTab({
               )}
               {systemPrompts[settings.model] !== DEFAULT_SYSTEM_PROMPTS[settings.model] && (
                 <>
-                  <span className="text-[10px] text-stone-300">•</span>
+                  <span className="text-[9px] sm:text-xs text-stone-300 hidden sm:inline">•</span>
                   <button 
                     onClick={() => {
                       setSelectedPromptModel(settings.model);
                       setEditingPrompt(systemPrompts[settings.model] || '');
                       setShowPromptEditor(true);
                     }}
-                    className="text-[10px] text-amber-500 hover:text-amber-600 flex items-center gap-1"
+                    className="text-[9px] sm:text-xs text-amber-500 hover:text-amber-600 hidden sm:flex items-center gap-1"
                   >
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5" />
                     </svg>
-                    Custom prompt
+                    Custom
                   </button>
                 </>
               )}
-              <span className="text-[10px] text-stone-300">•</span>
-              <span className="text-[10px] text-stone-400">Enter to send</span>
+              <span className="text-[9px] sm:text-xs text-stone-300 hidden sm:inline">•</span>
+              <span className="text-[9px] sm:text-xs text-stone-400 hidden sm:inline">↵ to send</span>
             </div>
           </div>
         </div>
@@ -1772,8 +1772,8 @@ function ScoreBar({ score, maxScore = 10, size = 'md', variant = 'neutral' }: {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function _ScoreDisplay({ score, label, size = 'md' }: { score: number; label?: string; size?: 'sm' | 'md' | 'lg' }) {
   const sizes = {
-    sm: { score: 'text-lg', label: 'text-[10px]' },
-    md: { score: 'text-2xl', label: 'text-[11px]' },
+    sm: { score: 'text-lg', label: 'text-xs' },
+    md: { score: 'text-2xl', label: 'text-xs' },
     lg: { score: 'text-4xl', label: 'text-xs' },
   };
   
@@ -1809,14 +1809,14 @@ function EvidenceQuote({
         : 'border-l-rose-300 bg-rose-50/30'
     }`}>
       <div className="flex items-center gap-2 mb-1.5">
-        <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${
+        <span className={`text-xs font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${
           isA 
             ? 'bg-violet-100 text-violet-700' 
             : 'bg-teal-100 text-teal-700'
         }`}>
           {answer}
         </span>
-        <span className={`text-[10px] font-medium uppercase tracking-wide px-1.5 py-0.5 rounded ${
+        <span className={`text-xs font-medium uppercase tracking-wide px-1.5 py-0.5 rounded ${
           isFavorable 
             ? 'bg-emerald-100 text-emerald-700' 
             : 'bg-rose-100 text-rose-700'
@@ -1824,12 +1824,12 @@ function EvidenceQuote({
           {isFavorable ? '✓ favorable' : '✗ unfavorable'}
         </span>
       </div>
-      <blockquote className={`text-[12px] italic leading-relaxed mb-1.5 ${
+      <blockquote className={`text-sm italic leading-relaxed mb-1.5 ${
         isFavorable ? 'text-stone-700' : 'text-stone-600'
       }`}>
         &ldquo;{quote}&rdquo;
       </blockquote>
-      <p className="text-[11px] text-stone-500 leading-relaxed">
+      <p className="text-xs text-stone-500 leading-relaxed">
         → {rationale}
       </p>
     </div>
@@ -1878,10 +1878,10 @@ function CriterionCard({
         {/* Title and description */}
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2 mb-0.5">
-            <h4 className="text-[14px] font-semibold text-stone-800 tracking-tight">{config.name}</h4>
-            <span className="text-[10px] text-stone-400 font-medium">w{config.weight}</span>
+            <h4 className="text-base font-semibold text-stone-800 tracking-tight">{config.name}</h4>
+            <span className="text-xs text-stone-400 font-medium">w{config.weight}</span>
             {allEvidence.length > 0 && (
-              <span className="text-[10px] text-amber-600 font-medium flex items-center gap-1">
+              <span className="text-xs text-amber-600 font-medium flex items-center gap-1">
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                 </svg>
@@ -1889,31 +1889,31 @@ function CriterionCard({
               </span>
             )}
           </div>
-          <p className="text-[12px] text-stone-400 leading-relaxed">{config.description}</p>
+          <p className="text-sm text-stone-400 leading-relaxed">{config.description}</p>
         </div>
         
         {/* Score comparison - visual bars */}
         <div className="flex items-center gap-3 flex-shrink-0">
           <div className="flex flex-col items-end gap-1 w-16">
             <div className="flex items-center gap-1.5 w-full">
-              <span className={`text-[10px] font-bold uppercase tracking-wide ${winner === 'A' ? 'text-violet-600' : 'text-stone-400'}`}>A</span>
+              <span className={`text-xs font-bold uppercase tracking-wide ${winner === 'A' ? 'text-violet-600' : 'text-stone-400'}`}>A</span>
               <div className="flex-1 h-1.5 bg-stone-100 rounded-full overflow-hidden">
                 <div 
                   className={`h-full rounded-full transition-all ${winner === 'A' ? 'bg-violet-500' : 'bg-stone-300'}`}
                   style={{ width: `${data.A.score * 10}%` }}
                 />
               </div>
-              <span className={`text-[12px] font-semibold tabular-nums ${winner === 'A' ? 'text-violet-600' : 'text-stone-500'}`}>{data.A.score}</span>
+              <span className={`text-sm font-semibold tabular-nums ${winner === 'A' ? 'text-violet-600' : 'text-stone-500'}`}>{data.A.score}</span>
             </div>
             <div className="flex items-center gap-1.5 w-full">
-              <span className={`text-[10px] font-bold uppercase tracking-wide ${winner === 'B' ? 'text-teal-600' : 'text-stone-400'}`}>B</span>
+              <span className={`text-xs font-bold uppercase tracking-wide ${winner === 'B' ? 'text-teal-600' : 'text-stone-400'}`}>B</span>
               <div className="flex-1 h-1.5 bg-stone-100 rounded-full overflow-hidden">
                 <div 
                   className={`h-full rounded-full transition-all ${winner === 'B' ? 'bg-teal-500' : 'bg-stone-300'}`}
                   style={{ width: `${data.B.score * 10}%` }}
                 />
               </div>
-              <span className={`text-[12px] font-semibold tabular-nums ${winner === 'B' ? 'text-teal-600' : 'text-stone-500'}`}>{data.B.score}</span>
+              <span className={`text-sm font-semibold tabular-nums ${winner === 'B' ? 'text-teal-600' : 'text-stone-500'}`}>{data.B.score}</span>
             </div>
           </div>
           
@@ -1922,9 +1922,9 @@ function CriterionCard({
             winner === 'A' ? 'bg-violet-100' : winner === 'B' ? 'bg-teal-100' : 'bg-stone-100'
           }`}>
             {winner === 'tie' ? (
-              <span className="text-[10px] text-stone-400">=</span>
+              <span className="text-xs text-stone-400">=</span>
             ) : (
-              <span className={`text-[10px] font-bold ${winner === 'A' ? 'text-violet-600' : 'text-teal-600'}`}>{winner}</span>
+              <span className={`text-xs font-bold ${winner === 'A' ? 'text-violet-600' : 'text-teal-600'}`}>{winner}</span>
             )}
           </div>
         </div>
@@ -1945,14 +1945,14 @@ function CriterionCard({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-5 h-5 rounded bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-                    <span className="text-[10px] font-bold text-white">A</span>
+                    <span className="text-xs font-bold text-white">A</span>
                   </div>
-                  <span className="text-[12px] font-semibold text-stone-700">Debate Outcome</span>
+                  <span className="text-sm font-semibold text-stone-700">Debate Outcome</span>
                 </div>
-                <span className={`text-[13px] font-bold tabular-nums ${getScoreColor(data.A.score)}`}>{data.A.score}/10</span>
+                <span className={`text-sm font-bold tabular-nums ${getScoreColor(data.A.score)}`}>{data.A.score}/10</span>
               </div>
               <ScoreBar score={data.A.score} size="sm" variant="a" />
-              <p className="text-[13px] text-stone-600 leading-[1.6]">{data.A.justification}</p>
+              <p className="text-sm text-stone-600 leading-[1.6]">{data.A.justification}</p>
             </div>
             
             {/* Response B */}
@@ -1960,14 +1960,14 @@ function CriterionCard({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-5 h-5 rounded bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
-                    <span className="text-[10px] font-bold text-white">B</span>
+                    <span className="text-xs font-bold text-white">B</span>
                   </div>
-                  <span className="text-[12px] font-semibold text-stone-700">Chat Response</span>
+                  <span className="text-sm font-semibold text-stone-700">Chat Response</span>
                 </div>
-                <span className={`text-[13px] font-bold tabular-nums ${getScoreColor(data.B.score)}`}>{data.B.score}/10</span>
+                <span className={`text-sm font-bold tabular-nums ${getScoreColor(data.B.score)}`}>{data.B.score}/10</span>
               </div>
               <ScoreBar score={data.B.score} size="sm" variant="b" />
-              <p className="text-[13px] text-stone-600 leading-[1.6]">{data.B.justification}</p>
+              <p className="text-sm text-stone-600 leading-[1.6]">{data.B.justification}</p>
             </div>
           </div>
           
@@ -1978,14 +1978,14 @@ function CriterionCard({
                 <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                 </svg>
-                <h5 className="text-[12px] font-semibold text-stone-700 uppercase tracking-wide">Influential Text</h5>
+                <h5 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">Influential Text</h5>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 {/* Favorable evidence */}
                 {favorableEvidence.length > 0 && (
                   <div className="space-y-2">
-                    <span className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wide flex items-center gap-1">
+                    <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wide flex items-center gap-1">
                       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
@@ -2006,7 +2006,7 @@ function CriterionCard({
                 {/* Unfavorable evidence */}
                 {unfavorableEvidence.length > 0 && (
                   <div className="space-y-2">
-                    <span className="text-[10px] font-semibold text-rose-600 uppercase tracking-wide flex items-center gap-1">
+                    <span className="text-xs font-semibold text-rose-600 uppercase tracking-wide flex items-center gap-1">
                       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                       </svg>
@@ -2059,16 +2059,16 @@ function WinnerShowcase({
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-white/70 text-[11px] font-medium uppercase tracking-widest">Verdict</span>
+              <span className="text-white/70 text-xs font-medium uppercase tracking-widest">Verdict</span>
               {evaluation.web_search_used && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/20 rounded-full text-[10px] font-medium text-white">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/20 rounded-full text-xs font-medium text-white">
                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                   Web Search
                 </span>
               )}
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/20 rounded-full text-[10px] font-medium text-white">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/20 rounded-full text-xs font-medium text-white">
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                 </svg>
@@ -2078,7 +2078,7 @@ function WinnerShowcase({
             <h2 className="text-[28px] font-bold text-white tracking-tight">
               {winner === 'tie' ? "It's a Tie" : winnerLabel}
             </h2>
-            <p className="text-white/80 text-[14px] mt-1">
+            <p className="text-white/80 text-base mt-1">
               {winner === 'tie' 
                 ? 'Both responses performed equally well overall'
                 : `Winner by ${Math.abs(scoreA - scoreB).toFixed(1)} points`
@@ -2109,20 +2109,20 @@ function WinnerShowcase({
             )}
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-md">
-                <span className="text-white font-bold text-[14px]">A</span>
+                <span className="text-white font-bold text-base">A</span>
               </div>
               <div>
-                <p className="text-[13px] font-semibold text-stone-800">{responseALabel}</p>
-                <p className="text-[11px] text-stone-400">Multi-agent debate</p>
+                <p className="text-sm font-semibold text-stone-800">{responseALabel}</p>
+                <p className="text-xs text-stone-400">Multi-agent debate</p>
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex items-baseline gap-2">
                 <span className="text-[42px] font-bold text-stone-800 tracking-tight tabular-nums">{scoreA.toFixed(1)}</span>
-                <span className="text-[14px] text-stone-400">/ {maxPossible}</span>
+                <span className="text-base text-stone-400">/ {maxPossible}</span>
               </div>
               <ScoreBar score={scoreA} maxScore={maxPossible} size="lg" variant="a" />
-              <p className="text-[12px] text-stone-500">{((scoreA / maxPossible) * 100).toFixed(0)}% of maximum score</p>
+              <p className="text-sm text-stone-500">{((scoreA / maxPossible) * 100).toFixed(0)}% of maximum score</p>
             </div>
           </div>
           
@@ -2141,20 +2141,20 @@ function WinnerShowcase({
             )}
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-md">
-                <span className="text-white font-bold text-[14px]">B</span>
+                <span className="text-white font-bold text-base">B</span>
               </div>
               <div>
-                <p className="text-[13px] font-semibold text-stone-800">{responseBLabel}</p>
-                <p className="text-[11px] text-stone-400">Single-shot chat</p>
+                <p className="text-sm font-semibold text-stone-800">{responseBLabel}</p>
+                <p className="text-xs text-stone-400">Single-shot chat</p>
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex items-baseline gap-2">
                 <span className="text-[42px] font-bold text-stone-800 tracking-tight tabular-nums">{scoreB.toFixed(1)}</span>
-                <span className="text-[14px] text-stone-400">/ {maxPossible}</span>
+                <span className="text-base text-stone-400">/ {maxPossible}</span>
               </div>
               <ScoreBar score={scoreB} maxScore={maxPossible} size="lg" variant="b" />
-              <p className="text-[12px] text-stone-500">{((scoreB / maxPossible) * 100).toFixed(0)}% of maximum score</p>
+              <p className="text-sm text-stone-500">{((scoreB / maxPossible) * 100).toFixed(0)}% of maximum score</p>
             </div>
           </div>
         </div>
@@ -2165,9 +2165,9 @@ function WinnerShowcase({
             <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
             </svg>
-            <h3 className="text-[14px] font-semibold text-stone-700">Key Differentiator</h3>
+            <h3 className="text-base font-semibold text-stone-700">Key Differentiator</h3>
           </div>
-          <p className="text-[15px] text-stone-600 leading-[1.7]">{evaluation.winner_rationale}</p>
+          <p className="text-base text-stone-600 leading-[1.7]">{evaluation.winner_rationale}</p>
         </div>
         
         {/* Summaries Grid */}
@@ -2177,18 +2177,18 @@ function WinnerShowcase({
               <div className="w-4 h-4 rounded bg-violet-200 flex items-center justify-center">
                 <span className="text-[9px] font-bold text-violet-700">A</span>
               </div>
-              <span className="text-[11px] font-semibold text-violet-700 uppercase tracking-wide">Summary</span>
+              <span className="text-xs font-semibold text-violet-700 uppercase tracking-wide">Summary</span>
             </div>
-            <p className="text-[13px] text-stone-600 leading-[1.6]">{evaluation.overall.A.summary}</p>
+            <p className="text-sm text-stone-600 leading-[1.6]">{evaluation.overall.A.summary}</p>
           </div>
           <div className="p-4 bg-teal-50/50 rounded-xl border border-teal-100">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-4 h-4 rounded bg-teal-200 flex items-center justify-center">
                 <span className="text-[9px] font-bold text-teal-700">B</span>
               </div>
-              <span className="text-[11px] font-semibold text-teal-700 uppercase tracking-wide">Summary</span>
+              <span className="text-xs font-semibold text-teal-700 uppercase tracking-wide">Summary</span>
             </div>
-            <p className="text-[13px] text-stone-600 leading-[1.6]">{evaluation.overall.B.summary}</p>
+            <p className="text-sm text-stone-600 leading-[1.6]">{evaluation.overall.B.summary}</p>
           </div>
         </div>
       </div>
@@ -2212,9 +2212,9 @@ function UsageStats({ usage }: {
         <svg className="w-4 h-4 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
         </svg>
-        <span className="text-[11px] font-semibold text-stone-500 uppercase tracking-wide">Token Usage</span>
+        <span className="text-xs font-semibold text-stone-500 uppercase tracking-wide">Token Usage</span>
       </div>
-      <div className="flex items-center gap-4 text-[12px]">
+      <div className="flex items-center gap-4 text-sm">
         <div className="flex items-center gap-1.5">
           <span className="text-stone-400">Input:</span>
           <span className="font-semibold text-stone-600 tabular-nums">{usage.input_tokens.toLocaleString()}</span>
@@ -2257,15 +2257,15 @@ function ScoreComparison({ evaluation }: { evaluation: EvaluationResult }) {
       <div className="text-center">
         <div className="inline-flex items-center gap-2 mb-2">
           <div className="w-6 h-6 rounded bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-            <span className="text-[10px] font-bold text-white">A</span>
+            <span className="text-xs font-bold text-white">A</span>
           </div>
-          <span className="text-[12px] font-semibold text-stone-700">Debate</span>
+          <span className="text-sm font-semibold text-stone-700">Debate</span>
         </div>
         <div className="space-y-1">
-          <div className="text-[24px] font-bold text-violet-600 tabular-nums">{avgA.toFixed(1)}</div>
-          <div className="text-[11px] text-stone-400">avg score</div>
+          <div className="text-2xl font-bold text-violet-600 tabular-nums">{avgA.toFixed(1)}</div>
+          <div className="text-xs text-stone-400">avg score</div>
           <div className="flex justify-center gap-2 mt-2">
-            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-semibold rounded">
+            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded">
               {aWins} wins
             </span>
           </div>
@@ -2274,24 +2274,24 @@ function ScoreComparison({ evaluation }: { evaluation: EvaluationResult }) {
       
       {/* VS / Ties */}
       <div className="flex flex-col items-center justify-center border-x border-stone-100">
-        <div className="text-[10px] font-bold text-stone-300 uppercase tracking-widest mb-1">VS</div>
-        <div className="text-[18px] font-bold text-stone-400">{ties}</div>
-        <div className="text-[10px] text-stone-400">ties</div>
+        <div className="text-xs font-bold text-stone-300 uppercase tracking-widest mb-1">VS</div>
+        <div className="text-xl font-bold text-stone-400">{ties}</div>
+        <div className="text-xs text-stone-400">ties</div>
       </div>
       
       {/* B Stats */}
       <div className="text-center">
         <div className="inline-flex items-center gap-2 mb-2">
           <div className="w-6 h-6 rounded bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
-            <span className="text-[10px] font-bold text-white">B</span>
+            <span className="text-xs font-bold text-white">B</span>
           </div>
-          <span className="text-[12px] font-semibold text-stone-700">Chat</span>
+          <span className="text-sm font-semibold text-stone-700">Chat</span>
         </div>
         <div className="space-y-1">
-          <div className="text-[24px] font-bold text-teal-600 tabular-nums">{avgB.toFixed(1)}</div>
-          <div className="text-[11px] text-stone-400">avg score</div>
+          <div className="text-2xl font-bold text-teal-600 tabular-nums">{avgB.toFixed(1)}</div>
+          <div className="text-xs text-stone-400">avg score</div>
           <div className="flex justify-center gap-2 mt-2">
-            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-semibold rounded">
+            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded">
               {bWins} wins
             </span>
           </div>
@@ -2439,60 +2439,64 @@ function EvaluationTab({
 
   return (
     <main ref={scrollRef} className="flex-1 overflow-y-auto bg-stone-50/50">
-      <div className="max-w-5xl mx-auto px-6 py-10">
+      <div className="max-w-5xl mx-auto px-3 sm:px-6 py-6 sm:py-10">
         {/* Hero Header */}
-        <header className="mb-10">
-          <div className="flex items-start justify-between">
+        <header className="mb-6 sm:mb-10">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div className="space-y-1">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <div className="flex items-center gap-2.5 sm:gap-3 mb-2">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 flex-shrink-0">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
                   </svg>
                 </div>
                 <div>
-                  <h1 className="text-[22px] font-bold text-stone-800 tracking-tight">
-                    Comparative Evaluation
+                  <h1 className="text-lg sm:text-2xl font-bold text-stone-800 tracking-tight">
+                    Document Evaluation
                   </h1>
-                  <p className="text-[13px] text-stone-500">
-                    Blind assessment across 7 criteria with weighted scoring
+                  <p className="text-xs sm:text-sm text-stone-500">
+                    Compares debate document vs ChatGPT response
                   </p>
                 </div>
               </div>
             </div>
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {evaluationResult && (
                 <button
+                  type="button"
                   onClick={clearEvaluation}
-                  className="px-4 py-2 text-[13px] font-medium text-stone-500 hover:text-stone-700 bg-white border border-stone-200 hover:border-stone-300 rounded-lg transition-colors"
+                  className="px-3 sm:px-4 py-2 text-sm sm:text-sm font-medium text-stone-500 hover:text-stone-700 active:text-stone-800 bg-white border border-stone-200 hover:border-stone-300 rounded-lg transition-colors"
                 >
                   Reset
                 </button>
               )}
               <button
+                type="button"
                 onClick={handleEvaluate}
                 disabled={!debateFinalResponse || !chatFinalResponse || isEvaluating}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${
+                className={`flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg text-sm sm:text-sm font-semibold transition-all btn-press ${
                   debateFinalResponse && chatFinalResponse && !isEvaluating
-                    ? 'bg-stone-900 text-white hover:bg-stone-800 shadow-sm'
+                    ? 'bg-stone-900 text-white hover:bg-stone-800 active:bg-black shadow-sm'
                     : 'bg-stone-100 text-stone-400 cursor-not-allowed'
                 }`}
               >
                 {isEvaluating ? (
                   <>
-                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Evaluating...
+                    <span className="hidden sm:inline">Evaluating...</span>
+                    <span className="sm:hidden">...</span>
                   </>
                 ) : (
                   <>
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
-                    Run Evaluation
+                    <span className="hidden sm:inline">Run Evaluation</span>
+                    <span className="sm:hidden">Evaluate</span>
                   </>
                 )}
               </button>
@@ -2507,55 +2511,55 @@ function EvaluationTab({
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <div>
-              <p className="text-[13px] font-semibold text-red-800">Evaluation failed</p>
-              <p className="text-[13px] text-red-600 mt-0.5">{error}</p>
+              <p className="text-sm font-semibold text-red-800">Evaluation failed</p>
+              <p className="text-sm text-red-600 mt-0.5">{error}</p>
             </div>
           </div>
         )}
 
         {/* Responses Under Comparison */}
-        <section className="mb-10">
-          <div className="flex items-center gap-2 mb-4">
-            <h2 className="text-[11px] font-semibold text-stone-400 uppercase tracking-widest">Responses Under Comparison</h2>
+        <section className="mb-6 sm:mb-10">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4">
+            <h2 className="text-xs sm:text-xs font-semibold text-stone-400 uppercase tracking-widest whitespace-nowrap">Responses</h2>
             <div className="flex-1 h-px bg-stone-200" />
           </div>
 
-          <div className="grid grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
             {/* Response A (Debate) */}
             <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
-              <div className="px-5 py-4 border-b border-stone-100 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm">
-                    <span className="text-white font-bold text-[12px]">A</span>
+              <div className="px-3 sm:px-5 py-3 sm:py-4 border-b border-stone-100 flex items-center justify-between">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm flex-shrink-0">
+                    <span className="text-white font-bold text-xs sm:text-sm">A</span>
                   </div>
                   <div>
-                    <h3 className="text-[14px] font-semibold text-stone-800">Debate Outcome</h3>
-                    <p className="text-[11px] text-stone-400">Multi-agent synthesis</p>
+                    <h3 className="text-sm sm:text-base font-semibold text-stone-800">Debate Outcome</h3>
+                    <p className="text-xs sm:text-xs text-stone-400">Multi-agent synthesis</p>
                   </div>
                 </div>
                 {debateFinalResponse && (
-                  <span className="text-[10px] text-stone-400 bg-stone-100 px-2 py-1 rounded font-medium">
+                  <span className="text-[9px] sm:text-xs text-stone-400 bg-stone-100 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded font-medium">
                     {debateFinalResponse.length.toLocaleString()} chars
                   </span>
                 )}
               </div>
-              <div className="p-5 max-h-[280px] overflow-y-auto">
+              <div className="p-3 sm:p-5 max-h-[200px] sm:max-h-[280px] overflow-y-auto">
                 {debateFinalResponse ? (
-                  <div className="text-[13px] text-stone-600 leading-[1.7] whitespace-pre-wrap font-[system-ui]">
-                    {debateFinalResponse.slice(0, 1200)}
-                    {debateFinalResponse.length > 1200 && (
-                      <span className="text-stone-400">... [{(debateFinalResponse.length - 1200).toLocaleString()} more chars]</span>
+                  <div className="text-sm sm:text-sm text-stone-600 leading-[1.65] sm:leading-[1.7] whitespace-pre-wrap font-[system-ui]">
+                    {debateFinalResponse.slice(0, 800)}
+                    {debateFinalResponse.length > 800 && (
+                      <span className="text-stone-400">... [{(debateFinalResponse.length - 800).toLocaleString()} more]</span>
                     )}
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center mb-3">
-                      <svg className="w-6 h-6 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <div className="flex flex-col items-center justify-center py-8 sm:py-12 text-center">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-stone-100 flex items-center justify-center mb-2 sm:mb-3">
+                      <svg className="w-5 h-5 sm:w-6 sm:h-6 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                       </svg>
                     </div>
-                    <p className="text-[13px] font-medium text-stone-500">No debate response</p>
-                    <p className="text-[12px] text-stone-400 mt-0.5">Complete a debate first</p>
+                    <p className="text-sm sm:text-sm font-medium text-stone-500">No debate response</p>
+                    <p className="text-xs sm:text-sm text-stone-400 mt-0.5">Complete a debate first</p>
                   </div>
                 )}
               </div>
@@ -2563,39 +2567,39 @@ function EvaluationTab({
 
             {/* Response B (Chat) */}
             <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
-              <div className="px-5 py-4 border-b border-stone-100 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-sm">
-                    <span className="text-white font-bold text-[12px]">B</span>
+              <div className="px-3 sm:px-5 py-3 sm:py-4 border-b border-stone-100 flex items-center justify-between">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-sm flex-shrink-0">
+                    <span className="text-white font-bold text-xs sm:text-sm">B</span>
                   </div>
                   <div>
-                    <h3 className="text-[14px] font-semibold text-stone-800">Chat Response</h3>
-                    <p className="text-[11px] text-stone-400">Single-shot generation</p>
+                    <h3 className="text-sm sm:text-base font-semibold text-stone-800">Chat Response</h3>
+                    <p className="text-xs sm:text-xs text-stone-400">Single-shot generation</p>
                   </div>
                 </div>
                 {chatFinalResponse && (
-                  <span className="text-[10px] text-stone-400 bg-stone-100 px-2 py-1 rounded font-medium">
+                  <span className="text-[9px] sm:text-xs text-stone-400 bg-stone-100 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded font-medium">
                     {chatFinalResponse.length.toLocaleString()} chars
                   </span>
                 )}
               </div>
-              <div className="p-5 max-h-[280px] overflow-y-auto">
+              <div className="p-3 sm:p-5 max-h-[200px] sm:max-h-[280px] overflow-y-auto">
                 {chatFinalResponse ? (
-                  <div className="text-[13px] text-stone-600 leading-[1.7] whitespace-pre-wrap font-[system-ui]">
-                    {chatFinalResponse.slice(0, 1200)}
-                    {chatFinalResponse.length > 1200 && (
-                      <span className="text-stone-400">... [{(chatFinalResponse.length - 1200).toLocaleString()} more chars]</span>
+                  <div className="text-sm sm:text-sm text-stone-600 leading-[1.65] sm:leading-[1.7] whitespace-pre-wrap font-[system-ui]">
+                    {chatFinalResponse.slice(0, 800)}
+                    {chatFinalResponse.length > 800 && (
+                      <span className="text-stone-400">... [{(chatFinalResponse.length - 800).toLocaleString()} more]</span>
                     )}
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center mb-3">
-                      <svg className="w-6 h-6 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <div className="flex flex-col items-center justify-center py-8 sm:py-12 text-center">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-stone-100 flex items-center justify-center mb-2 sm:mb-3">
+                      <svg className="w-5 h-5 sm:w-6 sm:h-6 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
                       </svg>
                     </div>
-                    <p className="text-[13px] font-medium text-stone-500">No chat response</p>
-                    <p className="text-[12px] text-stone-400 mt-0.5">Start a conversation in the Chat tab</p>
+                    <p className="text-sm sm:text-sm font-medium text-stone-500">No chat response</p>
+                    <p className="text-xs sm:text-sm text-stone-400 mt-0.5">Start a conversation in Chat tab</p>
                   </div>
                 )}
               </div>
@@ -2628,25 +2632,28 @@ function EvaluationTab({
             </section>
 
             {/* Criteria Breakdown */}
-            <section className="mb-10">
-              <div className="flex items-center justify-between mb-5">
+            <section className="mb-6 sm:mb-10">
+              <div className="flex items-center justify-between mb-3 sm:mb-5">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-[11px] font-semibold text-stone-400 uppercase tracking-widest">Criteria Analysis</h2>
-                  <div className="flex-1 h-px bg-stone-200 w-24" />
+                  <h2 className="text-xs sm:text-xs font-semibold text-stone-400 uppercase tracking-widest">Criteria</h2>
+                  <div className="flex-1 h-px bg-stone-200 w-12 sm:w-24" />
                 </div>
                 <div className="flex items-center gap-1">
                   <button
+                    type="button"
                     onClick={collapseAll}
-                    className="px-3 py-1.5 text-[11px] font-medium text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-md transition-colors"
+                    className="px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-xs font-medium text-stone-400 hover:text-stone-600 active:text-stone-700 hover:bg-stone-100 rounded-md transition-colors"
                   >
                     Collapse
                   </button>
                   <span className="text-stone-200">|</span>
                   <button
+                    type="button"
                     onClick={expandAll}
-                    className="px-3 py-1.5 text-[11px] font-medium text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-md transition-colors"
+                    className="px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-xs font-medium text-stone-400 hover:text-stone-600 active:text-stone-700 hover:bg-stone-100 rounded-md transition-colors"
                   >
-                    Expand All
+                    <span className="hidden sm:inline">Expand All</span>
+                    <span className="sm:hidden">All</span>
                   </button>
                 </div>
               </div>
@@ -2668,32 +2675,32 @@ function EvaluationTab({
 
         {/* Loading State */}
         {isEvaluating && (
-          <div className="bg-white rounded-2xl border border-stone-200 p-12">
+          <div className="bg-white rounded-xl sm:rounded-2xl border border-stone-200 p-8 sm:p-12">
             <div className="flex flex-col items-center justify-center">
-              <div className="relative mb-6">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-                  <svg className="w-8 h-8 text-white animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <div className="relative mb-4 sm:mb-6">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+                  <svg className="w-7 h-7 sm:w-8 sm:h-8 text-white animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
                   </svg>
                 </div>
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm border border-stone-200">
-                  <svg className="w-4 h-4 text-indigo-500 animate-spin" fill="none" viewBox="0 0 24 24">
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-white rounded-full flex items-center justify-center shadow-sm border border-stone-200">
+                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-500 animate-spin" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
                 </div>
               </div>
-              <h3 className="text-[16px] font-semibold text-stone-800 mb-1">Analyzing Responses</h3>
-              <p className="text-[13px] text-stone-500 text-center max-w-sm">
-                Evaluating both responses across 7 weighted criteria. This typically takes 10-15 seconds.
+              <h3 className="text-base sm:text-lg font-semibold text-stone-800 mb-1">Analyzing Responses</h3>
+              <p className="text-sm sm:text-sm text-stone-500 text-center max-w-sm px-2">
+                Evaluating across 7 criteria. Takes 10-15 seconds.
               </p>
               
               {/* Progress indicators */}
-              <div className="mt-6 flex items-center gap-2">
+              <div className="mt-4 sm:mt-6 flex items-center gap-2">
                 {[0, 1, 2].map((i) => (
                   <div 
                     key={i}
-                    className="w-2 h-2 rounded-full bg-indigo-500 animate-bounce"
+                    className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-indigo-500 animate-bounce"
                     style={{ animationDelay: `${i * 0.15}s` }}
                   />
                 ))}
@@ -2711,13 +2718,13 @@ function EvaluationTab({
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
                 </svg>
               </div>
-              <h3 className="text-[15px] font-semibold text-stone-700 mb-1">Ready to Compare</h3>
-              <p className="text-[13px] text-stone-500 max-w-sm mb-4">
+              <h3 className="text-base font-semibold text-stone-700 mb-1">Ready to Compare</h3>
+              <p className="text-sm text-stone-500 max-w-sm mb-4">
                 Both responses are loaded. Click &quot;Run Evaluation&quot; to analyze and compare them across multiple criteria.
               </p>
               <button
                 onClick={handleEvaluate}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold bg-stone-900 text-white hover:bg-stone-800 transition-colors"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-stone-900 text-white hover:bg-stone-800 transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -2762,8 +2769,8 @@ function SystemCriterionCard({
           </div>
           <div className="text-left">
             <div className="flex items-center gap-2">
-              <h3 className="text-[14px] font-semibold text-stone-800">{config.name}</h3>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+              <h3 className="text-base font-semibold text-stone-800">{config.name}</h3>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                 config.category === 'outcome' 
                   ? 'bg-emerald-100 text-emerald-700' 
                   : 'bg-blue-100 text-blue-700'
@@ -2771,7 +2778,7 @@ function SystemCriterionCard({
                 {config.category === 'outcome' ? 'Outcome' : 'Process'}
               </span>
             </div>
-            <p className="text-[12px] text-stone-400 mt-0.5">{config.description}</p>
+            <p className="text-sm text-stone-400 mt-0.5">{config.description}</p>
           </div>
         </div>
         
@@ -2779,10 +2786,10 @@ function SystemCriterionCard({
           {/* Score display */}
           <div className="flex items-center gap-3">
             <div className="text-right">
-              <div className={`text-[18px] font-bold ${getScoreColor(score)}`}>
+              <div className={`text-xl font-bold ${getScoreColor(score)}`}>
                 {score.toFixed(1)}
               </div>
-              <div className="text-[10px] text-stone-400">/ 10</div>
+              <div className="text-xs text-stone-400">/ 10</div>
             </div>
             <div className="w-16 h-2 rounded-full bg-stone-100 overflow-hidden">
               <div 
@@ -2807,15 +2814,15 @@ function SystemCriterionCard({
         <div className="px-5 pb-5 pt-2 border-t border-stone-100">
           {/* Justification */}
           <div className="mb-4">
-            <h4 className="text-[11px] font-semibold text-stone-400 uppercase tracking-wide mb-2">Justification</h4>
-            <p className="text-[13px] text-stone-600 leading-relaxed">{data.justification}</p>
+            <h4 className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-2">Justification</h4>
+            <p className="text-sm text-stone-600 leading-relaxed">{data.justification}</p>
           </div>
           
           {/* Evidence */}
           <div className="grid grid-cols-2 gap-4">
             {/* Positive Evidence */}
             <div>
-              <h4 className="text-[11px] font-semibold text-emerald-600 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+              <h4 className="text-xs font-semibold text-emerald-600 uppercase tracking-wide mb-2 flex items-center gap-1.5">
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
@@ -2825,22 +2832,22 @@ function SystemCriterionCard({
                 {data.positive_evidence.length > 0 ? (
                   data.positive_evidence.map((ev, i) => (
                     <div key={i} className="p-3 bg-emerald-50 rounded-lg border border-emerald-100">
-                      <p className="text-[12px] text-stone-600 italic mb-1.5">&ldquo;{ev.quote}&rdquo;</p>
+                      <p className="text-sm text-stone-600 italic mb-1.5">&ldquo;{ev.quote}&rdquo;</p>
                       {ev.speaker && (
-                        <p className="text-[10px] text-emerald-600 font-medium mb-1">— {ev.speaker}</p>
+                        <p className="text-xs text-emerald-600 font-medium mb-1">— {ev.speaker}</p>
                       )}
-                      <p className="text-[11px] text-stone-500">{ev.rationale}</p>
+                      <p className="text-xs text-stone-500">{ev.rationale}</p>
                     </div>
                   ))
                 ) : (
-                  <p className="text-[12px] text-stone-400 italic">No positive evidence noted</p>
+                  <p className="text-sm text-stone-400 italic">No positive evidence noted</p>
                 )}
               </div>
             </div>
             
             {/* Negative Evidence */}
             <div>
-              <h4 className="text-[11px] font-semibold text-amber-600 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+              <h4 className="text-xs font-semibold text-amber-600 uppercase tracking-wide mb-2 flex items-center gap-1.5">
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
@@ -2850,15 +2857,15 @@ function SystemCriterionCard({
                 {data.negative_evidence.length > 0 ? (
                   data.negative_evidence.map((ev, i) => (
                     <div key={i} className="p-3 bg-amber-50 rounded-lg border border-amber-100">
-                      <p className="text-[12px] text-stone-600 italic mb-1.5">&ldquo;{ev.quote}&rdquo;</p>
+                      <p className="text-sm text-stone-600 italic mb-1.5">&ldquo;{ev.quote}&rdquo;</p>
                       {ev.speaker && (
-                        <p className="text-[10px] text-amber-600 font-medium mb-1">— {ev.speaker}</p>
+                        <p className="text-xs text-amber-600 font-medium mb-1">— {ev.speaker}</p>
                       )}
-                      <p className="text-[11px] text-stone-500">{ev.rationale}</p>
+                      <p className="text-xs text-stone-500">{ev.rationale}</p>
                     </div>
                   ))
                 ) : (
-                  <p className="text-[12px] text-stone-400 italic">No issues noted</p>
+                  <p className="text-sm text-stone-400 italic">No issues noted</p>
                 )}
               </div>
             </div>
@@ -2988,33 +2995,34 @@ function SystemEvaluationTab({
 
   return (
     <main ref={scrollRef} className="flex-1 overflow-y-auto bg-stone-50/50">
-      <div className="max-w-5xl mx-auto px-6 py-10">
+      <div className="max-w-5xl mx-auto px-3 sm:px-6 py-6 sm:py-10">
         {/* Hero Header */}
-        <header className="mb-10">
-          <div className="flex items-start justify-between">
+        <header className="mb-6 sm:mb-10">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div className="space-y-1">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-teal-500/20">
-                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <div className="flex items-center gap-2.5 sm:gap-3 mb-2">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-teal-500/20 flex-shrink-0">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
                   </svg>
                 </div>
                 <div>
-                  <h1 className="text-[22px] font-bold text-stone-800 tracking-tight">
-                    System Evaluation
+                  <h1 className="text-lg sm:text-2xl font-bold text-stone-800 tracking-tight">
+                    Debate Evaluation
                   </h1>
-                  <p className="text-[13px] text-stone-500">
-                    Holistic assessment of the debate system&apos;s performance
+                  <p className="text-xs sm:text-sm text-stone-500">
+                    Evaluates debate process &amp; goal achievement
                   </p>
                 </div>
               </div>
             </div>
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {evaluationResult && (
                 <button
+                  type="button"
                   onClick={clearEvaluation}
-                  className="px-4 py-2 text-[13px] font-medium text-stone-500 hover:text-stone-700 bg-white border border-stone-200 hover:border-stone-300 rounded-lg transition-colors"
+                  className="px-3 sm:px-4 py-2 text-sm sm:text-sm font-medium text-stone-500 hover:text-stone-700 active:text-stone-800 bg-white border border-stone-200 hover:border-stone-300 rounded-lg transition-colors"
                 >
                   Reset
                 </button>
@@ -3026,26 +3034,28 @@ function SystemEvaluationTab({
                   handleEvaluate();
                 }}
                 disabled={messages.length === 0 || isEvaluating}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${
+                className={`flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg text-sm sm:text-sm font-semibold transition-all btn-press ${
                   messages.length > 0 && !isEvaluating
-                    ? 'bg-teal-600 text-white hover:bg-teal-700 shadow-sm'
+                    ? 'bg-teal-600 text-white hover:bg-teal-700 active:bg-teal-800 shadow-sm'
                     : 'bg-stone-100 text-stone-400 cursor-not-allowed'
                 }`}
               >
                 {isEvaluating ? (
                   <>
-                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Evaluating System...
+                    <span className="hidden sm:inline">Evaluating...</span>
+                    <span className="sm:hidden">...</span>
                   </>
                 ) : (
                   <>
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
                     </svg>
-                    Run System Eval
+                    <span className="hidden sm:inline">Run Debate Eval</span>
+                    <span className="sm:hidden">Evaluate</span>
                   </>
                 )}
               </button>
@@ -3055,43 +3065,43 @@ function SystemEvaluationTab({
 
         {/* Error message */}
         {error && (
-          <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
-            <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <div className="mb-4 sm:mb-8 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2 sm:gap-3 animate-fade-in">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <div>
-              <p className="text-[13px] font-semibold text-red-800">System evaluation failed</p>
-              <p className="text-[13px] text-red-600 mt-0.5">{error}</p>
+              <p className="text-sm sm:text-sm font-semibold text-red-800">Evaluation failed</p>
+              <p className="text-xs sm:text-sm text-red-600 mt-0.5">{error}</p>
             </div>
           </div>
         )}
 
         {/* Context Cards */}
-        <section className="mb-10">
-          <div className="flex items-center gap-2 mb-4">
-            <h2 className="text-[11px] font-semibold text-stone-400 uppercase tracking-widest">Evaluation Context</h2>
+        <section className="mb-6 sm:mb-10">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4">
+            <h2 className="text-xs sm:text-xs font-semibold text-stone-400 uppercase tracking-widest whitespace-nowrap">Context</h2>
             <div className="flex-1 h-px bg-stone-200" />
           </div>
 
-          <div className="grid grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
             {/* User Goal */}
             <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
-              <div className="px-5 py-4 border-b border-stone-100 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-sm">
-                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <div className="px-3 sm:px-5 py-3 sm:py-4 border-b border-stone-100 flex items-center gap-2 sm:gap-3">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-sm flex-shrink-0">
+                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-[14px] font-semibold text-stone-800">User Goal</h3>
-                  <p className="text-[11px] text-stone-400">Original request to evaluate against</p>
+                  <h3 className="text-sm sm:text-base font-semibold text-stone-800">User Goal</h3>
+                  <p className="text-xs sm:text-xs text-stone-400">Original request</p>
                 </div>
               </div>
-              <div className="p-5 max-h-[200px] overflow-y-auto">
-                <div className="text-[13px] text-stone-600 leading-[1.7] whitespace-pre-wrap">
-                  {userGoal.slice(0, 800)}
-                  {userGoal.length > 800 && (
-                    <span className="text-stone-400">... [{(userGoal.length - 800).toLocaleString()} more chars]</span>
+              <div className="p-3 sm:p-5 max-h-[150px] sm:max-h-[200px] overflow-y-auto">
+                <div className="text-sm sm:text-sm text-stone-600 leading-[1.65] sm:leading-[1.7] whitespace-pre-wrap">
+                  {userGoal.slice(0, 500)}
+                  {userGoal.length > 500 && (
+                    <span className="text-stone-400">... [{(userGoal.length - 500).toLocaleString()} more]</span>
                   )}
                 </div>
               </div>
@@ -3099,36 +3109,21 @@ function SystemEvaluationTab({
 
             {/* Transcript Summary */}
             <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
-              <div className="px-5 py-4 border-b border-stone-100 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-sm">
-                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <div className="px-3 sm:px-5 py-3 sm:py-4 border-b border-stone-100 flex items-center gap-2 sm:gap-3">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-sm flex-shrink-0">
+                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-[14px] font-semibold text-stone-800">Transcript</h3>
-                  <p className="text-[11px] text-stone-400">Debate to be evaluated</p>
+                  <h3 className="text-sm sm:text-base font-semibold text-stone-800">Transcript</h3>
+                  <p className="text-xs sm:text-xs text-stone-400">{messages.length} messages</p>
                 </div>
               </div>
-              <div className="p-5">
-                <div className="grid grid-cols-4 gap-4 text-center">
-                  <div>
-                    <div className="text-[20px] font-bold text-stone-800">{messages.length}</div>
-                    <div className="text-[11px] text-stone-400">Messages</div>
-                  </div>
-                  <div>
-                    <div className="text-[20px] font-bold text-amber-600">{messages.filter(m => m.role === 'moderator').length}</div>
-                    <div className="text-[11px] text-stone-400">Moderator</div>
-                  </div>
-                  <div>
-                    <div className="text-[20px] font-bold text-violet-600">{messages.filter(m => m.role === 'claude').length}</div>
-                    <div className="text-[11px] text-stone-400">Claude</div>
-                  </div>
-                  <div>
-                    <div className="text-[20px] font-bold text-sky-600">{messages.filter(m => m.role === 'gpt').length}</div>
-                    <div className="text-[11px] text-stone-400">GPT</div>
-                  </div>
-                </div>
+              <div className="p-3 sm:p-5">
+                <p className="text-sm sm:text-sm text-stone-500 leading-relaxed">
+                  Transcript will be analyzed for goal alignment, accuracy, and debate quality.
+                </p>
               </div>
             </div>
           </div>
@@ -3145,56 +3140,56 @@ function SystemEvaluationTab({
             )}
 
             {/* Overall Scores */}
-            <section className="mb-8">
-              <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-sm">
-                <h2 className="text-[11px] font-semibold text-stone-400 uppercase tracking-widest mb-6">Overall Performance</h2>
+            <section className="mb-6 sm:mb-8">
+              <div className="bg-white rounded-xl sm:rounded-2xl border border-stone-200 p-4 sm:p-6 shadow-sm">
+                <h2 className="text-xs sm:text-xs font-semibold text-stone-400 uppercase tracking-widest mb-4 sm:mb-6">Overall Performance</h2>
                 
-                <div className="grid grid-cols-3 gap-6">
+                <div className="grid grid-cols-3 gap-2 sm:gap-6">
                   {/* Process Score */}
-                  <div className="text-center p-4 rounded-xl bg-blue-50 border border-blue-100">
-                    <div className={`text-[32px] font-bold ${getScoreColor(evaluationResult.process_score)}`}>
+                  <div className="text-center p-2.5 sm:p-4 rounded-lg sm:rounded-xl bg-blue-50 border border-blue-100">
+                    <div className={`text-xl sm:text-[32px] font-bold ${getScoreColor(evaluationResult.process_score)}`}>
                       {evaluationResult.process_score.toFixed(1)}
                     </div>
-                    <div className="text-[12px] font-semibold text-blue-700 mt-1">Process Score</div>
-                    <div className="text-[11px] text-blue-500 mt-0.5">How well the debate ran</div>
+                    <div className="text-xs sm:text-sm font-semibold text-blue-700 mt-0.5 sm:mt-1">Process</div>
+                    <div className="text-[9px] sm:text-xs text-blue-500 mt-0.5 hidden sm:block">How well it ran</div>
                   </div>
                   
                   {/* Outcome Score */}
-                  <div className="text-center p-4 rounded-xl bg-emerald-50 border border-emerald-100">
-                    <div className={`text-[32px] font-bold ${getScoreColor(evaluationResult.outcome_score)}`}>
+                  <div className="text-center p-2.5 sm:p-4 rounded-lg sm:rounded-xl bg-emerald-50 border border-emerald-100">
+                    <div className={`text-xl sm:text-[32px] font-bold ${getScoreColor(evaluationResult.outcome_score)}`}>
                       {evaluationResult.outcome_score.toFixed(1)}
                     </div>
-                    <div className="text-[12px] font-semibold text-emerald-700 mt-1">Outcome Score</div>
-                    <div className="text-[11px] text-emerald-500 mt-0.5">Quality of the result</div>
+                    <div className="text-xs sm:text-sm font-semibold text-emerald-700 mt-0.5 sm:mt-1">Outcome</div>
+                    <div className="text-[9px] sm:text-xs text-emerald-500 mt-0.5 hidden sm:block">Quality of result</div>
                   </div>
                   
                   {/* Overall Score */}
-                  <div className="text-center p-4 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600">
-                    <div className="text-[32px] font-bold text-white">
+                  <div className="text-center p-2.5 sm:p-4 rounded-lg sm:rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600">
+                    <div className="text-xl sm:text-[32px] font-bold text-white">
                       {evaluationResult.weighted_overall_score.toFixed(1)}
                     </div>
-                    <div className="text-[12px] font-semibold text-white/90 mt-1">Overall Score</div>
-                    <div className="text-[11px] text-white/70 mt-0.5">Weighted average</div>
+                    <div className="text-xs sm:text-sm font-semibold text-white/90 mt-0.5 sm:mt-1">Overall</div>
+                    <div className="text-[9px] sm:text-xs text-white/70 mt-0.5 hidden sm:block">Weighted avg</div>
                   </div>
                 </div>
               </div>
             </section>
 
             {/* Strengths & Weaknesses */}
-            <section className="mb-8">
-              <div className="grid grid-cols-2 gap-5">
+            <section className="mb-6 sm:mb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
                 {/* Strengths */}
-                <div className="bg-white rounded-xl border border-stone-200 p-5 shadow-sm">
-                  <h3 className="text-[11px] font-semibold text-emerald-600 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <div className="bg-white rounded-xl border border-stone-200 p-3 sm:p-5 shadow-sm">
+                  <h3 className="text-xs sm:text-xs font-semibold text-emerald-600 uppercase tracking-widest mb-3 sm:mb-4 flex items-center gap-1.5 sm:gap-2">
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
-                    Key Strengths
+                    Strengths
                   </h3>
-                  <ul className="space-y-2">
+                  <ul className="space-y-1.5 sm:space-y-2">
                     {evaluationResult.key_strengths.map((strength, i) => (
-                      <li key={i} className="flex items-start gap-2 text-[13px] text-stone-600">
-                        <span className="text-emerald-500 mt-1">•</span>
+                      <li key={i} className="flex items-start gap-1.5 sm:gap-2 text-sm sm:text-sm text-stone-600 leading-relaxed">
+                        <span className="text-emerald-500 mt-0.5 sm:mt-1 flex-shrink-0">•</span>
                         {strength}
                       </li>
                     ))}
@@ -3202,17 +3197,18 @@ function SystemEvaluationTab({
                 </div>
                 
                 {/* Weaknesses */}
-                <div className="bg-white rounded-xl border border-stone-200 p-5 shadow-sm">
-                  <h3 className="text-[11px] font-semibold text-amber-600 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <div className="bg-white rounded-xl border border-stone-200 p-3 sm:p-5 shadow-sm">
+                  <h3 className="text-xs sm:text-xs font-semibold text-amber-600 uppercase tracking-widest mb-3 sm:mb-4 flex items-center gap-1.5 sm:gap-2">
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
-                    Areas for Improvement
+                    <span className="hidden sm:inline">Areas for Improvement</span>
+                    <span className="sm:hidden">Improvements</span>
                   </h3>
-                  <ul className="space-y-2">
+                  <ul className="space-y-1.5 sm:space-y-2">
                     {evaluationResult.key_weaknesses.map((weakness, i) => (
-                      <li key={i} className="flex items-start gap-2 text-[13px] text-stone-600">
-                        <span className="text-amber-500 mt-1">•</span>
+                      <li key={i} className="flex items-start gap-1.5 sm:gap-2 text-sm sm:text-sm text-stone-600 leading-relaxed">
+                        <span className="text-amber-500 mt-0.5 sm:mt-1 flex-shrink-0">•</span>
                         {weakness}
                       </li>
                     ))}
@@ -3222,42 +3218,45 @@ function SystemEvaluationTab({
             </section>
 
             {/* Summary */}
-            <section className="mb-8">
-              <div className="bg-gradient-to-br from-stone-800 to-stone-900 rounded-xl p-6 text-white">
-                <h3 className="text-[11px] font-semibold text-white/60 uppercase tracking-widest mb-3">Summary</h3>
-                <p className="text-[15px] leading-relaxed text-white/90">{evaluationResult.summary}</p>
+            <section className="mb-6 sm:mb-8">
+              <div className="bg-gradient-to-br from-stone-800 to-stone-900 rounded-xl p-4 sm:p-6 text-white">
+                <h3 className="text-xs sm:text-xs font-semibold text-white/60 uppercase tracking-widest mb-2 sm:mb-3">Summary</h3>
+                <p className="text-sm sm:text-base leading-relaxed text-white/90">{evaluationResult.summary}</p>
               </div>
             </section>
 
             {/* Criteria Breakdown */}
-            <section className="mb-10">
-              <div className="flex items-center justify-between mb-5">
+            <section className="mb-6 sm:mb-10">
+              <div className="flex items-center justify-between mb-3 sm:mb-5">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-[11px] font-semibold text-stone-400 uppercase tracking-widest">Detailed Criteria Analysis</h2>
-                  <div className="flex-1 h-px bg-stone-200 w-24" />
+                  <h2 className="text-xs sm:text-xs font-semibold text-stone-400 uppercase tracking-widest">Criteria</h2>
+                  <div className="flex-1 h-px bg-stone-200 w-12 sm:w-24" />
                 </div>
                 <div className="flex items-center gap-1">
                   <button
+                    type="button"
                     onClick={collapseAll}
-                    className="px-3 py-1.5 text-[11px] font-medium text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-md transition-colors"
+                    className="px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-xs font-medium text-stone-400 hover:text-stone-600 active:text-stone-700 hover:bg-stone-100 rounded-md transition-colors"
                   >
                     Collapse
                   </button>
                   <span className="text-stone-200">|</span>
                   <button
+                    type="button"
                     onClick={expandAll}
-                    className="px-3 py-1.5 text-[11px] font-medium text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-md transition-colors"
+                    className="px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-xs font-medium text-stone-400 hover:text-stone-600 active:text-stone-700 hover:bg-stone-100 rounded-md transition-colors"
                   >
-                    Expand All
+                    <span className="hidden sm:inline">Expand All</span>
+                    <span className="sm:hidden">All</span>
                   </button>
                 </div>
               </div>
               
               {/* Outcome Criteria */}
-              <div className="mb-6">
-                <h3 className="text-[12px] font-semibold text-emerald-700 mb-3 flex items-center gap-2">
-                  <span className="px-2 py-0.5 bg-emerald-100 rounded-full">Outcome</span>
-                  How good is the result?
+              <div className="mb-4 sm:mb-6">
+                <h3 className="text-xs sm:text-sm font-semibold text-emerald-700 mb-2 sm:mb-3 flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                  <span className="px-1.5 sm:px-2 py-0.5 bg-emerald-100 rounded-full text-xs sm:text-sm">Outcome</span>
+                  <span className="text-xs sm:text-sm text-stone-500">How good is the result?</span>
                 </h3>
                 <div className="space-y-2">
                   {outcomeCriteria.map((key) => (
@@ -3274,9 +3273,9 @@ function SystemEvaluationTab({
               
               {/* Process Criteria */}
               <div>
-                <h3 className="text-[12px] font-semibold text-blue-700 mb-3 flex items-center gap-2">
-                  <span className="px-2 py-0.5 bg-blue-100 rounded-full">Process</span>
-                  How well did the debate run?
+                <h3 className="text-xs sm:text-sm font-semibold text-blue-700 mb-2 sm:mb-3 flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                  <span className="px-1.5 sm:px-2 py-0.5 bg-blue-100 rounded-full text-xs sm:text-sm">Process</span>
+                  <span className="text-xs sm:text-sm text-stone-500">How well did the debate run?</span>
                 </h3>
                 <div className="space-y-2">
                   {processCriteria.map((key) => (
@@ -3311,9 +3310,9 @@ function SystemEvaluationTab({
                   </svg>
                 </div>
               </div>
-              <h3 className="text-[16px] font-semibold text-stone-800 mb-1">Analyzing System Performance</h3>
-              <p className="text-[13px] text-stone-500 text-center max-w-sm">
-                Evaluating the debate system across 7 criteria. This may take 15-30 seconds.
+              <h3 className="text-lg font-semibold text-stone-800 mb-1">Analyzing Debate</h3>
+              <p className="text-sm text-stone-500 text-center max-w-sm">
+                Evaluating the debate across 10 criteria. This may take a few minutes.
               </p>
               
               <div className="mt-6 flex items-center gap-2">
@@ -3338,9 +3337,9 @@ function SystemEvaluationTab({
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
                 </svg>
               </div>
-              <h3 className="text-[15px] font-semibold text-stone-700 mb-1">Ready to Evaluate System</h3>
-              <p className="text-[13px] text-stone-500 max-w-sm mb-4">
-                Assess how well the entire debate system performed - from goal alignment to collaboration to final output.
+              <h3 className="text-base font-semibold text-stone-700 mb-1">Ready to Evaluate Debate</h3>
+              <p className="text-sm text-stone-500 max-w-sm mb-4">
+                Assess how well the debate achieved the user&apos;s goal across 10 criteria.
               </p>
               <button
                 type="button"
@@ -3348,12 +3347,12 @@ function SystemEvaluationTab({
                   console.log('[SystemEval] Empty state button clicked!');
                   handleEvaluate();
                 }}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold bg-teal-600 text-white hover:bg-teal-700 transition-colors"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-teal-600 text-white hover:bg-teal-700 transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
                 </svg>
-                Run System Eval
+                Run Debate Eval
               </button>
             </div>
           </div>
@@ -3541,10 +3540,11 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
 
   const roles: (ParticipantRole | 'all')[] = ['all', 'user', 'moderator', 'claude', 'gpt'];
 
-  const tabs: { id: ViewTab; label: string; icon: React.ReactNode }[] = [
+  const tabs: { id: ViewTab; label: string; shortLabel: string; icon: React.ReactNode }[] = [
     {
       id: 'debate',
       label: 'Debate',
+      shortLabel: 'Debate',
       icon: (
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -3554,6 +3554,7 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
     {
       id: 'chat',
       label: 'Chat',
+      shortLabel: 'Chat',
       icon: (
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
@@ -3562,7 +3563,8 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
     },
     {
       id: 'evaluation',
-      label: 'Evaluation',
+      label: 'Doc Eval',
+      shortLabel: 'Doc Eval',
       icon: (
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
@@ -3571,7 +3573,8 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
     },
     {
       id: 'system-eval',
-      label: 'System Eval',
+      label: 'Debate Eval',
+      shortLabel: 'Debate Eval',
       icon: (
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
@@ -3581,40 +3584,41 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
   ];
 
   return (
-    <div className="h-full flex flex-col bg-stone-50">
+    <div className="mobile-full-height flex flex-col bg-stone-50 safe-top">
       {/* Header */}
       <header className="flex-shrink-0 bg-white border-b border-stone-200">
         {/* Top bar */}
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between h-16">
+        <div className="max-w-5xl mx-auto px-3 sm:px-6">
+          <div className="flex items-center justify-between h-14 sm:h-16">
             {/* Logo + File name */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
               <button
                 onClick={onBackToProjects}
-                className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md shadow-indigo-500/20 hover:scale-105 hover:shadow-lg transition-all"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md shadow-indigo-500/20 hover:scale-105 active:scale-95 hover:shadow-lg transition-all flex-shrink-0"
                 title="Back to projects"
               >
-                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
               </button>
-              <div>
+              <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <h1 className="text-[15px] font-semibold text-stone-800 leading-tight">{projectName || fileName}</h1>
+                  <h1 className="text-base sm:text-lg font-semibold text-stone-800 leading-tight truncate">{projectName || fileName}</h1>
                   {projectName && (
-                    <span className="px-2 py-0.5 text-[10px] font-medium bg-stone-100 text-stone-500 rounded-full truncate max-w-[150px]" title={fileName}>
+                    <span className="hidden sm:inline px-2 py-0.5 text-xs font-medium bg-stone-100 text-stone-500 rounded-full truncate max-w-[120px]" title={fileName}>
                       {fileName}
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] text-stone-400 font-mono tabular-nums">
-                  {messages.length} messages · {stats.duration || '—'} · {stats.totalTokens > 0 ? `${(stats.totalTokens / 1000).toFixed(1)}k tokens` : '—'}
+                <p className="text-sm text-stone-400 font-mono tabular-nums truncate">
+                  {messages.length} msgs · {stats.duration || '—'}
+                  <span className="hidden sm:inline"> · {stats.totalTokens > 0 ? `${(stats.totalTokens / 1000).toFixed(1)}k tokens` : '—'}</span>
                 </p>
               </div>
             </div>
 
-            {/* Tab navigation */}
-            <nav className="flex items-center h-full">
+            {/* Tab navigation - desktop */}
+            <nav className="hidden md:flex items-center h-full">
               {tabs.map((tab) => {
                 const isActive = activeTab === tab.id;
                 return (
@@ -3622,7 +3626,7 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={`
-                      relative flex items-center gap-2 px-4 h-full text-[13px] font-medium transition-colors
+                      relative flex items-center gap-2 px-4 h-full text-base font-medium transition-colors
                       ${isActive ? 'text-indigo-600' : 'text-stone-400 hover:text-stone-600'}
                     `}
                   >
@@ -3636,28 +3640,53 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
               })}
             </nav>
 
-            {/* Actions */}
-            <div className="flex items-center gap-2">
+            {/* Actions - desktop only */}
+            <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
               <button
                 onClick={onBackToProjects}
-                className="px-3 py-1.5 text-[13px] font-medium text-stone-500 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition-colors flex items-center gap-1.5"
+                className="px-3 py-2 text-base font-medium text-stone-500 hover:text-stone-700 hover:bg-stone-100 active:bg-stone-200 rounded-lg transition-colors flex items-center gap-1.5"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
-                New Project
+                <span className="hidden lg:inline">New Project</span>
               </button>
             </div>
           </div>
         </div>
 
+        {/* Mobile Tab navigation */}
+        <nav className="md:hidden border-t border-stone-100 overflow-x-auto hide-scrollbar-mobile">
+          <div className="flex px-2">
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`
+                    relative flex items-center gap-2 px-4 py-3 text-base font-medium transition-colors whitespace-nowrap
+                    ${isActive ? 'text-indigo-600' : 'text-stone-400 active:text-stone-600'}
+                  `}
+                >
+                  {tab.icon}
+                  <span>{tab.shortLabel}</span>
+                  {isActive && (
+                    <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-indigo-600 rounded-full" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+
         {/* Sub-header with filters - only for debate tab */}
         {activeTab === 'debate' && (
           <div className="border-t border-stone-100">
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3">
-              <div className="flex items-center gap-3">
+            <div className="max-w-5xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                 {/* Search */}
-                <div className="relative flex-1 max-w-sm">
+                <div className="relative flex-1 sm:max-w-sm">
                   <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
@@ -3666,12 +3695,12 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
                     placeholder="Search messages..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 text-[14px] bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 placeholder:text-stone-400 transition-shadow"
+                    className="w-full pl-10 pr-4 py-2.5 sm:py-3 text-base bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 placeholder:text-stone-400 transition-shadow"
                   />
                 </div>
 
-                {/* Role filter */}
-                <div className="flex items-center bg-stone-100 rounded-lg p-1 gap-0.5">
+                {/* Role filter - horizontal scroll on mobile */}
+                <div className="flex items-center bg-stone-100 rounded-lg p-0.5 sm:p-1 gap-0.5 overflow-x-auto hide-scrollbar-mobile -mx-3 px-3 sm:mx-0 sm:px-0">
                   {roles.map((role) => {
                     const count = role === 'all' ? messages.length : (stats.byRole[role] || 0);
                     const isActive = filter === role;
@@ -3679,15 +3708,15 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
                       <button
                         key={role}
                         onClick={() => setFilter(role)}
-                        className={`px-3 py-1.5 text-[13px] font-medium rounded-md transition-all flex items-center gap-2 ${
+                        className={`px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base font-medium rounded-lg transition-all flex items-center gap-2 whitespace-nowrap flex-shrink-0 ${
                           isActive 
                             ? 'bg-white text-stone-800 shadow-sm' 
-                            : 'text-stone-500 hover:text-stone-700'
+                            : 'text-stone-500 hover:text-stone-700 active:text-stone-800'
                         }`}
                       >
                         {role !== 'all' && <TabAvatar role={role} />}
-                        <span className="hidden sm:inline">{role === 'all' ? 'All' : roleNames[role]}</span>
-                        <span className="text-stone-400 tabular-nums text-[12px]">{count}</span>
+                        <span className="hidden xs:inline sm:inline">{role === 'all' ? 'All' : roleNames[role]}</span>
+                        <span className="text-stone-400 tabular-nums text-sm">{count}</span>
                       </button>
                     );
                   })}
@@ -3701,15 +3730,15 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
       {/* Content */}
       {activeTab === 'debate' && (
         <main ref={scrollRef} className="flex-1 overflow-y-auto">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
+          <div className="max-w-3xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
             {groupedMessages.map((group, gi) => (
               <section key={gi}>
-                <div className="flex items-center gap-4 my-8 first:mt-0">
+                <div className="flex items-center gap-3 sm:gap-4 my-6 sm:my-8 first:mt-0">
                   <div className="h-px flex-1 bg-stone-200" />
-                  <time className="text-[12px] font-medium text-stone-400 tracking-wide uppercase">{group.date}</time>
+                  <time className="text-xs sm:text-sm font-medium text-stone-400 tracking-wide uppercase whitespace-nowrap">{group.date}</time>
                   <div className="h-px flex-1 bg-stone-200" />
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {group.messages.map((msg, mi) => (
                     <ChatMessage key={`${msg.timestamp}-${mi}`} message={msg} />
                   ))}
@@ -3718,21 +3747,21 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
             ))}
             
             {filteredMessages.length === 0 && (
-              <div className="text-center py-20">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-stone-100 flex items-center justify-center">
-                  <svg className="w-7 h-7 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <div className="text-center py-16 sm:py-20 px-4">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-4 rounded-full bg-stone-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 sm:w-7 sm:h-7 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                   </svg>
                 </div>
-                <p className="text-[15px] text-stone-500 mb-2">No messages found</p>
+                <p className="text-sm sm:text-base text-stone-500 mb-2">No messages found</p>
                 {searchQuery && (
-                  <button onClick={() => setSearchQuery('')} className="text-[14px] text-indigo-600 hover:text-indigo-700 font-medium">
+                  <button onClick={() => setSearchQuery('')} className="text-sm sm:text-base text-indigo-600 hover:text-indigo-700 active:text-indigo-800 font-medium py-2">
                     Clear search
                   </button>
                 )}
               </div>
             )}
-            <div className="h-12" />
+            <div className="h-8 sm:h-12" />
           </div>
         </main>
       )}
@@ -3772,10 +3801,10 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
       {showScrollTop && activeTab !== 'chat' && (
         <button
           onClick={() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed bottom-6 right-6 w-11 h-11 rounded-full bg-white border border-stone-200 shadow-lg flex items-center justify-center text-stone-500 hover:text-stone-800 hover:shadow-xl hover:scale-105 transition-all"
+          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white border border-stone-200 shadow-lg flex items-center justify-center text-stone-500 hover:text-stone-800 active:text-stone-900 hover:shadow-xl active:scale-95 transition-all safe-bottom z-50"
           aria-label="Scroll to top"
         >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
           </svg>
         </button>
