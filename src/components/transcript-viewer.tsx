@@ -19,7 +19,7 @@ interface TranscriptViewerProps {
   onBackToProjects?: () => void;
 }
 
-type ViewTab = 'debate' | 'chat' | 'evaluation';
+type ViewTab = 'debate' | 'chat' | 'evaluation' | 'system-eval';
 
 // Mini avatar for filter
 function TabAvatar({ role }: { role: ParticipantRole }) {
@@ -1734,6 +1734,11 @@ import {
   CRITERIA_CONFIG, 
   getScoreColor,
   getScoreGradient,
+  // System Evaluation types
+  SystemEvaluationResult,
+  SystemEvaluationApiResponse,
+  SYSTEM_CRITERIA_CONFIG,
+  SystemCriteriaScore,
 } from '@/types/evaluation';
 
 // Score bar component - refined with subtle animation
@@ -2729,6 +2734,637 @@ function EvaluationTab({
   );
 }
 
+// System Criterion Card Component
+function SystemCriterionCard({
+  criterionKey,
+  data,
+  isExpanded,
+  onToggle,
+}: { 
+  criterionKey: keyof SystemEvaluationResult['criteria_scores'];
+  data: SystemCriteriaScore;
+  isExpanded: boolean;
+  onToggle: () => void;
+}) {
+  const config = SYSTEM_CRITERIA_CONFIG[criterionKey];
+  const score = data.score;
+  
+  return (
+    <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
+      {/* Header - always visible */}
+      <button
+        onClick={onToggle}
+        className="w-full px-5 py-4 flex items-center justify-between hover:bg-stone-50/50 transition-colors"
+      >
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center text-lg">
+            {config.icon}
+          </div>
+          <div className="text-left">
+            <div className="flex items-center gap-2">
+              <h3 className="text-[14px] font-semibold text-stone-800">{config.name}</h3>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                config.category === 'outcome' 
+                  ? 'bg-emerald-100 text-emerald-700' 
+                  : 'bg-blue-100 text-blue-700'
+              }`}>
+                {config.category === 'outcome' ? 'Outcome' : 'Process'}
+              </span>
+            </div>
+            <p className="text-[12px] text-stone-400 mt-0.5">{config.description}</p>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          {/* Score display */}
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <div className={`text-[18px] font-bold ${getScoreColor(score)}`}>
+                {score.toFixed(1)}
+              </div>
+              <div className="text-[10px] text-stone-400">/ 10</div>
+            </div>
+            <div className="w-16 h-2 rounded-full bg-stone-100 overflow-hidden">
+              <div 
+                className={`h-full rounded-full bg-gradient-to-r ${getScoreGradient(score)}`}
+                style={{ width: `${score * 10}%` }}
+              />
+            </div>
+          </div>
+          
+          {/* Expand icon */}
+          <svg 
+            className={`w-5 h-5 text-stone-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </button>
+      
+      {/* Expanded content */}
+      {isExpanded && (
+        <div className="px-5 pb-5 pt-2 border-t border-stone-100">
+          {/* Justification */}
+          <div className="mb-4">
+            <h4 className="text-[11px] font-semibold text-stone-400 uppercase tracking-wide mb-2">Justification</h4>
+            <p className="text-[13px] text-stone-600 leading-relaxed">{data.justification}</p>
+          </div>
+          
+          {/* Evidence */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Positive Evidence */}
+            <div>
+              <h4 className="text-[11px] font-semibold text-emerald-600 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                Strengths ({data.positive_evidence.length})
+              </h4>
+              <div className="space-y-2">
+                {data.positive_evidence.length > 0 ? (
+                  data.positive_evidence.map((ev, i) => (
+                    <div key={i} className="p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+                      <p className="text-[12px] text-stone-600 italic mb-1.5">&ldquo;{ev.quote}&rdquo;</p>
+                      {ev.speaker && (
+                        <p className="text-[10px] text-emerald-600 font-medium mb-1">— {ev.speaker}</p>
+                      )}
+                      <p className="text-[11px] text-stone-500">{ev.rationale}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-[12px] text-stone-400 italic">No positive evidence noted</p>
+                )}
+              </div>
+            </div>
+            
+            {/* Negative Evidence */}
+            <div>
+              <h4 className="text-[11px] font-semibold text-amber-600 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Areas for Improvement ({data.negative_evidence.length})
+              </h4>
+              <div className="space-y-2">
+                {data.negative_evidence.length > 0 ? (
+                  data.negative_evidence.map((ev, i) => (
+                    <div key={i} className="p-3 bg-amber-50 rounded-lg border border-amber-100">
+                      <p className="text-[12px] text-stone-600 italic mb-1.5">&ldquo;{ev.quote}&rdquo;</p>
+                      {ev.speaker && (
+                        <p className="text-[10px] text-amber-600 font-medium mb-1">— {ev.speaker}</p>
+                      )}
+                      <p className="text-[11px] text-stone-500">{ev.rationale}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-[12px] text-stone-400 italic">No issues noted</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// System Evaluation Tab Component
+function SystemEvaluationTab({ 
+  messages, 
+  scrollRef,
+}: { 
+  messages: TranscriptMessage[]; 
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const [isEvaluating, setIsEvaluating] = useState(false);
+  const [evaluationResult, setEvaluationResult] = useState<SystemEvaluationResult | null>(null);
+  const [usageStats, setUsageStats] = useState<{ input_tokens: number; output_tokens: number; total_tokens: number; reasoning_tokens?: number } | null>(null);
+  const [expandedCriteria, setExpandedCriteria] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  // Get user goal from first user message
+  const userGoal = useMemo(() => {
+    const userMessage = messages.find(m => m.role === 'user');
+    return userMessage?.content || 'No explicit user goal found';
+  }, [messages]);
+
+  // Get final output - look for generated document or last substantive moderator message
+  const finalOutput = useMemo(() => {
+    // Look for generated document
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].metadata?.isGeneratedDocument) {
+        return messages[i].content;
+      }
+    }
+    // Fall back to last moderator message
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'moderator' && messages[i].content.length > 500) {
+        return messages[i].content;
+      }
+    }
+    return messages[messages.length - 1]?.content || '';
+  }, [messages]);
+
+  const toggleCriterion = (key: string) => {
+    setExpandedCriteria(prev => 
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  };
+
+  const expandAll = () => {
+    setExpandedCriteria(Object.keys(SYSTEM_CRITERIA_CONFIG));
+  };
+
+  const collapseAll = () => {
+    setExpandedCriteria([]);
+  };
+
+  const handleEvaluate = async () => {
+    console.log('[SystemEval] handleEvaluate called, messages:', messages.length);
+    console.log('[SystemEval] userGoal:', userGoal?.slice(0, 100));
+    console.log('[SystemEval] finalOutput length:', finalOutput?.length);
+    
+    if (messages.length === 0) {
+      console.log('[SystemEval] No messages, returning early');
+      setError('No messages to evaluate');
+      return;
+    }
+    
+    console.log('[SystemEval] Starting evaluation...');
+    setIsEvaluating(true);
+    setEvaluationResult(null);
+    setError(null);
+    
+    try {
+      console.log('[SystemEval] Sending request to /api/system-evaluate');
+      const response = await fetch('/api/system-evaluate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transcript: messages,
+          userGoal,
+          finalOutput,
+        }),
+      });
+
+      console.log('[SystemEval] Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('[SystemEval] Error response:', errorData);
+        throw new Error(errorData.details || errorData.error || 'System evaluation failed');
+      }
+
+      const data: SystemEvaluationApiResponse = await response.json();
+      console.log('[SystemEval] Success! Got evaluation:', data);
+      setEvaluationResult(data.evaluation);
+      
+      if (data.usage) {
+        setUsageStats(data.usage);
+      }
+    } catch (err) {
+      console.error('[SystemEval] Evaluation error:', err);
+      setError(err instanceof Error ? err.message : 'Evaluation failed. Please try again.');
+    } finally {
+      setIsEvaluating(false);
+    }
+  };
+
+  const clearEvaluation = () => {
+    setEvaluationResult(null);
+    setUsageStats(null);
+    setExpandedCriteria([]);
+  };
+
+  // Separate criteria by category
+  const processCriteria = Object.entries(SYSTEM_CRITERIA_CONFIG)
+    .filter(([, config]) => config.category === 'process')
+    .map(([key]) => key as keyof SystemEvaluationResult['criteria_scores']);
+  
+  const outcomeCriteria = Object.entries(SYSTEM_CRITERIA_CONFIG)
+    .filter(([, config]) => config.category === 'outcome')
+    .map(([key]) => key as keyof SystemEvaluationResult['criteria_scores']);
+
+  return (
+    <main ref={scrollRef} className="flex-1 overflow-y-auto bg-stone-50/50">
+      <div className="max-w-5xl mx-auto px-6 py-10">
+        {/* Hero Header */}
+        <header className="mb-10">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-teal-500/20">
+                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                  </svg>
+                </div>
+                <div>
+                  <h1 className="text-[22px] font-bold text-stone-800 tracking-tight">
+                    System Evaluation
+                  </h1>
+                  <p className="text-[13px] text-stone-500">
+                    Holistic assessment of the debate system&apos;s performance
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              {evaluationResult && (
+                <button
+                  onClick={clearEvaluation}
+                  className="px-4 py-2 text-[13px] font-medium text-stone-500 hover:text-stone-700 bg-white border border-stone-200 hover:border-stone-300 rounded-lg transition-colors"
+                >
+                  Reset
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  console.log('[SystemEval] Button clicked!');
+                  handleEvaluate();
+                }}
+                disabled={messages.length === 0 || isEvaluating}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${
+                  messages.length > 0 && !isEvaluating
+                    ? 'bg-teal-600 text-white hover:bg-teal-700 shadow-sm'
+                    : 'bg-stone-100 text-stone-400 cursor-not-allowed'
+                }`}
+              >
+                {isEvaluating ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Evaluating System...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                    </svg>
+                    Run System Eval
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* Error message */}
+        {error && (
+          <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+            <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p className="text-[13px] font-semibold text-red-800">System evaluation failed</p>
+              <p className="text-[13px] text-red-600 mt-0.5">{error}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Context Cards */}
+        <section className="mb-10">
+          <div className="flex items-center gap-2 mb-4">
+            <h2 className="text-[11px] font-semibold text-stone-400 uppercase tracking-widest">Evaluation Context</h2>
+            <div className="flex-1 h-px bg-stone-200" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            {/* User Goal */}
+            <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
+              <div className="px-5 py-4 border-b border-stone-100 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-sm">
+                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-[14px] font-semibold text-stone-800">User Goal</h3>
+                  <p className="text-[11px] text-stone-400">Original request to evaluate against</p>
+                </div>
+              </div>
+              <div className="p-5 max-h-[200px] overflow-y-auto">
+                <div className="text-[13px] text-stone-600 leading-[1.7] whitespace-pre-wrap">
+                  {userGoal.slice(0, 800)}
+                  {userGoal.length > 800 && (
+                    <span className="text-stone-400">... [{(userGoal.length - 800).toLocaleString()} more chars]</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Transcript Summary */}
+            <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
+              <div className="px-5 py-4 border-b border-stone-100 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-sm">
+                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-[14px] font-semibold text-stone-800">Transcript</h3>
+                  <p className="text-[11px] text-stone-400">Debate to be evaluated</p>
+                </div>
+              </div>
+              <div className="p-5">
+                <div className="grid grid-cols-4 gap-4 text-center">
+                  <div>
+                    <div className="text-[20px] font-bold text-stone-800">{messages.length}</div>
+                    <div className="text-[11px] text-stone-400">Messages</div>
+                  </div>
+                  <div>
+                    <div className="text-[20px] font-bold text-amber-600">{messages.filter(m => m.role === 'moderator').length}</div>
+                    <div className="text-[11px] text-stone-400">Moderator</div>
+                  </div>
+                  <div>
+                    <div className="text-[20px] font-bold text-violet-600">{messages.filter(m => m.role === 'claude').length}</div>
+                    <div className="text-[11px] text-stone-400">Claude</div>
+                  </div>
+                  <div>
+                    <div className="text-[20px] font-bold text-sky-600">{messages.filter(m => m.role === 'gpt').length}</div>
+                    <div className="text-[11px] text-stone-400">GPT</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Evaluation Results */}
+        {evaluationResult && (
+          <>
+            {/* Usage Stats */}
+            {usageStats && (
+              <section className="mb-6">
+                <UsageStats usage={usageStats} />
+              </section>
+            )}
+
+            {/* Overall Scores */}
+            <section className="mb-8">
+              <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-sm">
+                <h2 className="text-[11px] font-semibold text-stone-400 uppercase tracking-widest mb-6">Overall Performance</h2>
+                
+                <div className="grid grid-cols-3 gap-6">
+                  {/* Process Score */}
+                  <div className="text-center p-4 rounded-xl bg-blue-50 border border-blue-100">
+                    <div className={`text-[32px] font-bold ${getScoreColor(evaluationResult.process_score)}`}>
+                      {evaluationResult.process_score.toFixed(1)}
+                    </div>
+                    <div className="text-[12px] font-semibold text-blue-700 mt-1">Process Score</div>
+                    <div className="text-[11px] text-blue-500 mt-0.5">How well the debate ran</div>
+                  </div>
+                  
+                  {/* Outcome Score */}
+                  <div className="text-center p-4 rounded-xl bg-emerald-50 border border-emerald-100">
+                    <div className={`text-[32px] font-bold ${getScoreColor(evaluationResult.outcome_score)}`}>
+                      {evaluationResult.outcome_score.toFixed(1)}
+                    </div>
+                    <div className="text-[12px] font-semibold text-emerald-700 mt-1">Outcome Score</div>
+                    <div className="text-[11px] text-emerald-500 mt-0.5">Quality of the result</div>
+                  </div>
+                  
+                  {/* Overall Score */}
+                  <div className="text-center p-4 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600">
+                    <div className="text-[32px] font-bold text-white">
+                      {evaluationResult.weighted_overall_score.toFixed(1)}
+                    </div>
+                    <div className="text-[12px] font-semibold text-white/90 mt-1">Overall Score</div>
+                    <div className="text-[11px] text-white/70 mt-0.5">Weighted average</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Strengths & Weaknesses */}
+            <section className="mb-8">
+              <div className="grid grid-cols-2 gap-5">
+                {/* Strengths */}
+                <div className="bg-white rounded-xl border border-stone-200 p-5 shadow-sm">
+                  <h3 className="text-[11px] font-semibold text-emerald-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Key Strengths
+                  </h3>
+                  <ul className="space-y-2">
+                    {evaluationResult.key_strengths.map((strength, i) => (
+                      <li key={i} className="flex items-start gap-2 text-[13px] text-stone-600">
+                        <span className="text-emerald-500 mt-1">•</span>
+                        {strength}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                
+                {/* Weaknesses */}
+                <div className="bg-white rounded-xl border border-stone-200 p-5 shadow-sm">
+                  <h3 className="text-[11px] font-semibold text-amber-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    Areas for Improvement
+                  </h3>
+                  <ul className="space-y-2">
+                    {evaluationResult.key_weaknesses.map((weakness, i) => (
+                      <li key={i} className="flex items-start gap-2 text-[13px] text-stone-600">
+                        <span className="text-amber-500 mt-1">•</span>
+                        {weakness}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </section>
+
+            {/* Summary */}
+            <section className="mb-8">
+              <div className="bg-gradient-to-br from-stone-800 to-stone-900 rounded-xl p-6 text-white">
+                <h3 className="text-[11px] font-semibold text-white/60 uppercase tracking-widest mb-3">Summary</h3>
+                <p className="text-[15px] leading-relaxed text-white/90">{evaluationResult.summary}</p>
+              </div>
+            </section>
+
+            {/* Criteria Breakdown */}
+            <section className="mb-10">
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-[11px] font-semibold text-stone-400 uppercase tracking-widest">Detailed Criteria Analysis</h2>
+                  <div className="flex-1 h-px bg-stone-200 w-24" />
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={collapseAll}
+                    className="px-3 py-1.5 text-[11px] font-medium text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-md transition-colors"
+                  >
+                    Collapse
+                  </button>
+                  <span className="text-stone-200">|</span>
+                  <button
+                    onClick={expandAll}
+                    className="px-3 py-1.5 text-[11px] font-medium text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-md transition-colors"
+                  >
+                    Expand All
+                  </button>
+                </div>
+              </div>
+              
+              {/* Outcome Criteria */}
+              <div className="mb-6">
+                <h3 className="text-[12px] font-semibold text-emerald-700 mb-3 flex items-center gap-2">
+                  <span className="px-2 py-0.5 bg-emerald-100 rounded-full">Outcome</span>
+                  How good is the result?
+                </h3>
+                <div className="space-y-2">
+                  {outcomeCriteria.map((key) => (
+                    <SystemCriterionCard
+                      key={key}
+                      criterionKey={key}
+                      data={evaluationResult.criteria_scores[key]}
+                      isExpanded={expandedCriteria.includes(key)}
+                      onToggle={() => toggleCriterion(key)}
+                    />
+                  ))}
+                </div>
+              </div>
+              
+              {/* Process Criteria */}
+              <div>
+                <h3 className="text-[12px] font-semibold text-blue-700 mb-3 flex items-center gap-2">
+                  <span className="px-2 py-0.5 bg-blue-100 rounded-full">Process</span>
+                  How well did the debate run?
+                </h3>
+                <div className="space-y-2">
+                  {processCriteria.map((key) => (
+                    <SystemCriterionCard
+                      key={key}
+                      criterionKey={key}
+                      data={evaluationResult.criteria_scores[key]}
+                      isExpanded={expandedCriteria.includes(key)}
+                      onToggle={() => toggleCriterion(key)}
+                    />
+                  ))}
+                </div>
+              </div>
+            </section>
+          </>
+        )}
+
+        {/* Loading State */}
+        {isEvaluating && (
+          <div className="bg-white rounded-2xl border border-stone-200 p-12">
+            <div className="flex flex-col items-center justify-center">
+              <div className="relative mb-6">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-teal-500/25">
+                  <svg className="w-8 h-8 text-white animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                  </svg>
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm border border-stone-200">
+                  <svg className="w-4 h-4 text-teal-500 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                </div>
+              </div>
+              <h3 className="text-[16px] font-semibold text-stone-800 mb-1">Analyzing System Performance</h3>
+              <p className="text-[13px] text-stone-500 text-center max-w-sm">
+                Evaluating the debate system across 7 criteria. This may take 15-30 seconds.
+              </p>
+              
+              <div className="mt-6 flex items-center gap-2">
+                {[0, 1, 2].map((i) => (
+                  <div 
+                    key={i}
+                    className="w-2 h-2 rounded-full bg-teal-500 animate-bounce"
+                    style={{ animationDelay: `${i * 0.15}s` }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!evaluationResult && !isEvaluating && messages.length > 0 && (
+          <div className="bg-white rounded-2xl border border-dashed border-stone-300 p-12">
+            <div className="flex flex-col items-center justify-center text-center">
+              <div className="w-14 h-14 rounded-xl bg-teal-100 flex items-center justify-center mb-4">
+                <svg className="w-7 h-7 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                </svg>
+              </div>
+              <h3 className="text-[15px] font-semibold text-stone-700 mb-1">Ready to Evaluate System</h3>
+              <p className="text-[13px] text-stone-500 max-w-sm mb-4">
+                Assess how well the entire debate system performed - from goal alignment to collaboration to final output.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  console.log('[SystemEval] Empty state button clicked!');
+                  handleEvaluate();
+                }}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold bg-teal-600 text-white hover:bg-teal-700 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                </svg>
+                Run System Eval
+              </button>
+            </div>
+          </div>
+        )}
+        
+        <div className="h-16" />
+      </div>
+    </main>
+  );
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function TranscriptViewer({ messages, fileName, onReset, projectId, projectName, onBackToProjects }: TranscriptViewerProps) {
   const router = useRouter();
@@ -2827,7 +3463,7 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
     const f = searchParams.get('filter') as ParticipantRole | 'all' | null;
     const q = searchParams.get('q');
     
-    if (tab && ['debate', 'chat', 'evaluation'].includes(tab) && tab !== activeTab) {
+    if (tab && ['debate', 'chat', 'evaluation', 'system-eval'].includes(tab) && tab !== activeTab) {
       setActiveTabState(tab);
     }
     if (f && ['all', 'user', 'moderator', 'claude', 'gpt'].includes(f) && f !== filter) {
@@ -2930,6 +3566,15 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
       icon: (
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+        </svg>
+      ),
+    },
+    {
+      id: 'system-eval',
+      label: 'System Eval',
+      icon: (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
         </svg>
       ),
     },
@@ -3115,7 +3760,15 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
         />
       )}
 
-      {/* Scroll to top - only on debate/evaluation tabs */}
+      {/* SYSTEM EVAL TAB */}
+      {activeTab === 'system-eval' && (
+        <SystemEvaluationTab 
+          messages={messages} 
+          scrollRef={scrollRef}
+        />
+      )}
+
+      {/* Scroll to top - on debate/evaluation/system-eval tabs */}
       {showScrollTop && activeTab !== 'chat' && (
         <button
           onClick={() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
