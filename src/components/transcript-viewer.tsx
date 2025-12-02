@@ -2307,33 +2307,47 @@ function EvaluationTab({
   scrollRef,
   savedEvaluation,
   onSaveEvaluation,
+  evalState,
+  setEvalState,
 }: { 
   messages: TranscriptMessage[]; 
   chatMessages: ChatMessage[];
   scrollRef: React.RefObject<HTMLDivElement | null>;
   savedEvaluation?: { maude_response: string; chat_response: string; evaluation: string } | null;
   onSaveEvaluation?: (maude: string, chat: string, eval_: string) => void;
+  evalState: {
+    isEvaluating: boolean;
+    result: EvaluationResult | null;
+    usage: { input_tokens: number; output_tokens: number; total_tokens: number; reasoning_tokens?: number } | null;
+    error: string | null;
+  };
+  setEvalState: React.Dispatch<React.SetStateAction<{
+    isEvaluating: boolean;
+    result: EvaluationResult | null;
+    usage: { input_tokens: number; output_tokens: number; total_tokens: number; reasoning_tokens?: number } | null;
+    error: string | null;
+  }>>;
 }) {
-  const [isEvaluating, setIsEvaluating] = useState(false);
-  const [evaluationResult, setEvaluationResult] = useState<EvaluationResult | null>(null);
-  const [usageStats, setUsageStats] = useState<{ input_tokens: number; output_tokens: number; total_tokens: number; reasoning_tokens?: number } | null>(null);
   const [expandedCriteria, setExpandedCriteria] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
+
+  // Extract state from lifted state
+  const { isEvaluating, result: evaluationResult, usage: usageStats, error } = evalState;
 
   // Sync local state with saved evaluation when it loads
   useEffect(() => {
     if (savedEvaluation?.evaluation && !evaluationResult) {
       try {
         const parsed = JSON.parse(savedEvaluation.evaluation);
-        setEvaluationResult(parsed.evaluation || parsed);
-        if (parsed.usage) {
-          setUsageStats(parsed.usage);
-        }
+        setEvalState(prev => ({
+          ...prev,
+          result: parsed.evaluation || parsed,
+          usage: parsed.usage || null,
+        }));
       } catch {
         // Legacy format - ignore
       }
     }
-  }, [savedEvaluation, evaluationResult]);
+  }, [savedEvaluation, evaluationResult, setEvalState]);
 
   // Get final debate response - aggregate all agent content
   const debateFinalResponse = useMemo(() => {
@@ -2385,9 +2399,7 @@ function EvaluationTab({
   const handleEvaluate = async () => {
     if (!debateFinalResponse || !chatFinalResponse) return;
     
-    setIsEvaluating(true);
-    setEvaluationResult(null);
-    setError(null);
+    setEvalState(prev => ({ ...prev, isEvaluating: true, result: null, error: null }));
     
     try {
       const response = await fetch('/api/evaluate', {
@@ -2408,12 +2420,13 @@ function EvaluationTab({
       }
 
       const data: EvaluationApiResponse = await response.json();
-      setEvaluationResult(data.evaluation);
-      
-      // Store usage stats
-      if (data.usage) {
-        setUsageStats(data.usage);
-      }
+      setEvalState(prev => ({
+        ...prev,
+        isEvaluating: false,
+        result: data.evaluation,
+        usage: data.usage || null,
+        error: null,
+      }));
       
       // Save the evaluation result with usage
       if (onSaveEvaluation) {
@@ -2425,15 +2438,16 @@ function EvaluationTab({
       }
     } catch (err) {
       console.error('Evaluation error:', err);
-      setError(err instanceof Error ? err.message : 'Evaluation failed. Please try again.');
-    } finally {
-      setIsEvaluating(false);
+      setEvalState(prev => ({
+        ...prev,
+        isEvaluating: false,
+        error: err instanceof Error ? err.message : 'Evaluation failed. Please try again.',
+      }));
     }
   };
 
   const clearEvaluation = () => {
-    setEvaluationResult(null);
-    setUsageStats(null);
+    setEvalState({ isEvaluating: false, result: null, usage: null, error: null });
     setExpandedCriteria([]);
   };
 
@@ -2880,15 +2894,48 @@ function SystemCriterionCard({
 function SystemEvaluationTab({ 
   messages, 
   scrollRef,
+  savedEvaluation,
+  onSaveEvaluation,
+  evalState,
+  setEvalState,
 }: { 
   messages: TranscriptMessage[]; 
   scrollRef: React.RefObject<HTMLDivElement | null>;
+  savedEvaluation?: { evaluation: string } | null;
+  onSaveEvaluation?: (maude: string, chat: string, eval_: string) => void;
+  evalState: {
+    isEvaluating: boolean;
+    result: SystemEvaluationResult | null;
+    usage: { input_tokens: number; output_tokens: number; total_tokens: number; reasoning_tokens?: number } | null;
+    error: string | null;
+  };
+  setEvalState: React.Dispatch<React.SetStateAction<{
+    isEvaluating: boolean;
+    result: SystemEvaluationResult | null;
+    usage: { input_tokens: number; output_tokens: number; total_tokens: number; reasoning_tokens?: number } | null;
+    error: string | null;
+  }>>;
 }) {
-  const [isEvaluating, setIsEvaluating] = useState(false);
-  const [evaluationResult, setEvaluationResult] = useState<SystemEvaluationResult | null>(null);
-  const [usageStats, setUsageStats] = useState<{ input_tokens: number; output_tokens: number; total_tokens: number; reasoning_tokens?: number } | null>(null);
   const [expandedCriteria, setExpandedCriteria] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
+
+  // Extract state from lifted state
+  const { isEvaluating, result: evaluationResult, usage: usageStats, error } = evalState;
+
+  // Sync local state with saved evaluation when it loads
+  useEffect(() => {
+    if (savedEvaluation?.evaluation && !evaluationResult) {
+      try {
+        const parsed = JSON.parse(savedEvaluation.evaluation);
+        setEvalState(prev => ({
+          ...prev,
+          result: parsed.evaluation || parsed,
+          usage: parsed.usage || null,
+        }));
+      } catch {
+        // Legacy format - ignore
+      }
+    }
+  }, [savedEvaluation, evaluationResult, setEvalState]);
 
   // Get user goal from first user message
   const userGoal = useMemo(() => {
@@ -2934,14 +2981,12 @@ function SystemEvaluationTab({
     
     if (messages.length === 0) {
       console.log('[SystemEval] No messages, returning early');
-      setError('No messages to evaluate');
+      setEvalState(prev => ({ ...prev, error: 'No messages to evaluate' }));
       return;
     }
     
     console.log('[SystemEval] Starting evaluation...');
-    setIsEvaluating(true);
-    setEvaluationResult(null);
-    setError(null);
+    setEvalState(prev => ({ ...prev, isEvaluating: true, result: null, error: null }));
     
     try {
       console.log('[SystemEval] Sending request to /api/system-evaluate');
@@ -2965,22 +3010,34 @@ function SystemEvaluationTab({
 
       const data: SystemEvaluationApiResponse = await response.json();
       console.log('[SystemEval] Success! Got evaluation:', data);
-      setEvaluationResult(data.evaluation);
-      
-      if (data.usage) {
-        setUsageStats(data.usage);
+      setEvalState(prev => ({
+        ...prev,
+        isEvaluating: false,
+        result: data.evaluation,
+        usage: data.usage || null,
+        error: null,
+      }));
+
+      // Save the evaluation result with usage
+      if (onSaveEvaluation) {
+        onSaveEvaluation(
+          '', // No separate maude response for system eval
+          '', // No separate chat response for system eval
+          JSON.stringify({ evaluation: data.evaluation, usage: data.usage })
+        );
       }
     } catch (err) {
       console.error('[SystemEval] Evaluation error:', err);
-      setError(err instanceof Error ? err.message : 'Evaluation failed. Please try again.');
-    } finally {
-      setIsEvaluating(false);
+      setEvalState(prev => ({
+        ...prev,
+        isEvaluating: false,
+        error: err instanceof Error ? err.message : 'Evaluation failed. Please try again.',
+      }));
     }
   };
 
   const clearEvaluation = () => {
-    setEvaluationResult(null);
-    setUsageStats(null);
+    setEvalState({ isEvaluating: false, result: null, usage: null, error: null });
     setExpandedCriteria([]);
   };
 
@@ -3217,14 +3274,6 @@ function SystemEvaluationTab({
               </div>
             </section>
 
-            {/* Summary */}
-            <section className="mb-6 sm:mb-8">
-              <div className="bg-gradient-to-br from-stone-800 to-stone-900 rounded-xl p-4 sm:p-6 text-white">
-                <h3 className="text-xs sm:text-xs font-semibold text-white/60 uppercase tracking-widest mb-2 sm:mb-3">Summary</h3>
-                <p className="text-sm sm:text-base leading-relaxed text-white/90">{evaluationResult.summary}</p>
-              </div>
-            </section>
-
             {/* Criteria Breakdown */}
             <section className="mb-6 sm:mb-10">
               <div className="flex items-center justify-between mb-3 sm:mb-5">
@@ -3387,13 +3436,36 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
     clearChat 
   } = useProjectChat(projectId);
   
-  // Evaluation results - persisted
+  // Debate evaluation results - persisted
   const {
     evaluation: savedEvaluation,
     saveEvaluation,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     clearEvaluation,
-  } = useProjectEvaluation(projectId);
+  } = useProjectEvaluation(projectId, 'debate');
+
+  // System evaluation results - persisted
+  const {
+    evaluation: savedSystemEvaluation,
+    saveEvaluation: saveSystemEvaluation,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    clearEvaluation: clearSystemEvaluation,
+  } = useProjectEvaluation(projectId, 'system');
+
+  // Evaluation state - lifted to parent so it persists across tab switches
+  const [debateEvalState, setDebateEvalState] = useState<{
+    isEvaluating: boolean;
+    result: EvaluationResult | null;
+    usage: { input_tokens: number; output_tokens: number; total_tokens: number; reasoning_tokens?: number } | null;
+    error: string | null;
+  }>({ isEvaluating: false, result: null, usage: null, error: null });
+
+  const [systemEvalState, setSystemEvalState] = useState<{
+    isEvaluating: boolean;
+    result: SystemEvaluationResult | null;
+    usage: { input_tokens: number; output_tokens: number; total_tokens: number; reasoning_tokens?: number } | null;
+    error: string | null;
+  }>({ isEvaluating: false, result: null, usage: null, error: null });
 
   // Update URL when state changes
   const updateUrl = useCallback((params: { tab?: ViewTab; filter?: ParticipantRole | 'all'; q?: string }) => {
@@ -3630,7 +3702,16 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
                       ${isActive ? 'text-indigo-600' : 'text-stone-400 hover:text-stone-600'}
                     `}
                   >
-                    {tab.icon}
+                    {/* Show spinner if evaluation is in progress */}
+                    {((tab.id === 'evaluation' && debateEvalState.isEvaluating) || 
+                      (tab.id === 'system-eval' && systemEvalState.isEvaluating)) ? (
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    ) : (
+                      tab.icon
+                    )}
                     <span>{tab.label}</span>
                     {isActive && (
                       <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-indigo-600 rounded-full" />
@@ -3669,7 +3750,16 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
                     ${isActive ? 'text-indigo-600' : 'text-stone-400 active:text-stone-600'}
                   `}
                 >
-                  {tab.icon}
+                  {/* Show spinner if evaluation is in progress */}
+                  {((tab.id === 'evaluation' && debateEvalState.isEvaluating) || 
+                    (tab.id === 'system-eval' && systemEvalState.isEvaluating)) ? (
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  ) : (
+                    tab.icon
+                  )}
                   <span>{tab.shortLabel}</span>
                   {isActive && (
                     <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-indigo-600 rounded-full" />
@@ -3786,6 +3876,8 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
           scrollRef={scrollRef}
           savedEvaluation={savedEvaluation}
           onSaveEvaluation={saveEvaluation}
+          evalState={debateEvalState}
+          setEvalState={setDebateEvalState}
         />
       )}
 
@@ -3794,6 +3886,10 @@ export function TranscriptViewer({ messages, fileName, onReset, projectId, proje
         <SystemEvaluationTab 
           messages={messages} 
           scrollRef={scrollRef}
+          savedEvaluation={savedSystemEvaluation}
+          onSaveEvaluation={saveSystemEvaluation}
+          evalState={systemEvalState}
+          setEvalState={setSystemEvalState}
         />
       )}
 

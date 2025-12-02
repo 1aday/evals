@@ -427,6 +427,22 @@ p, .text-body {
   animation: score-fill 0.8s ease-out forwards;
 }
 
+/* Scale-in animation for modals */
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out forwards;
+}
+
 /* Globe spin animation */
 @keyframes spin {
   from {

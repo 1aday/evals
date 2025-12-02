@@ -53,31 +53,10 @@ export function useProjects() {
     loadProjects();
   }, []);
 
-  // Load last used project from settings
-  useEffect(() => {
-    async function loadLastProject() {
-      if (!isSupabaseConfigured || projects.length === 0) return;
-
-      try {
-        const { data } = await supabase
-          .from('user_settings')
-          .select('last_project_id')
-          .limit(1)
-          .single();
-
-        if (data?.last_project_id) {
-          const lastProject = projects.find(p => p.id === data.last_project_id);
-          if (lastProject) {
-            setCurrentProject(lastProject);
-          }
-        }
-    } catch {
-      // Ignore - no last project
-    }
-    }
-
-    loadLastProject();
-  }, [projects]);
+  // NOTE: We intentionally do NOT auto-load the last project.
+  // The user should explicitly select a project from the list.
+  // This prevents the app from opening an empty project that was
+  // just created but has no transcript data imported yet.
 
   // Create a new project
   const createProject = useCallback(async (
@@ -665,16 +644,16 @@ export interface EvaluationResult {
   created_at: string;
 }
 
-export function useProjectEvaluation(projectId?: string | null) {
+export function useProjectEvaluation(projectId?: string | null, evaluationType: 'debate' | 'system' = 'debate') {
   const [evaluation, setEvaluation] = useState<EvaluationResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load evaluation for project - using callback to avoid direct setState in effect
+  // Load evaluation for project
   useEffect(() => {
     let isMounted = true;
     
-    const load = () => {
-      console.log('[Eval] Loading evaluation for project:', projectId);
+    async function loadEvaluation() {
+      console.log('[Eval] Loading evaluation for project:', projectId, 'type:', evaluationType);
       
       if (!projectId) {
         console.log('[Eval] No projectId, skipping load');
@@ -685,9 +664,9 @@ export function useProjectEvaluation(projectId?: string | null) {
         return;
       }
 
-      // Handle local projects
+      // Handle local projects - use localStorage
       if (projectId.startsWith('local-')) {
-        const stored = localStorage.getItem(`evaluation-${projectId}`);
+        const stored = localStorage.getItem(`evaluation-${evaluationType}-${projectId}`);
         console.log('[Eval] Local project, localStorage data:', stored ? 'found' : 'not found');
         if (isMounted) {
           if (stored) {
@@ -704,42 +683,89 @@ export function useProjectEvaluation(projectId?: string | null) {
         return;
       }
 
-      // For now, just use localStorage for evaluations
-      // Can add Supabase table later if needed
-      const stored = localStorage.getItem(`evaluation-${projectId}`);
-      console.log('[Eval] Supabase project, localStorage key:', `evaluation-${projectId}`, 'data:', stored ? 'found' : 'not found');
-      if (isMounted) {
-        if (stored) {
+      // Load from Supabase
+      if (!isSupabaseConfigured) {
+        console.log('[Eval] Supabase not configured, using localStorage');
+        const stored = localStorage.getItem(`evaluation-${evaluationType}-${projectId}`);
+        if (isMounted) {
+          if (stored) {
+            try {
+              setEvaluation(JSON.parse(stored));
+            } catch {
+              setEvaluation(null);
+            }
+          } else {
+            setEvaluation(null);
+          }
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('evaluations')
+          .select('*')
+          .eq('project_id', projectId)
+          .eq('evaluation_type', evaluationType)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('[Eval] Error loading evaluation:', error);
+        }
+
+        if (isMounted) {
+          if (data) {
+            console.log('[Eval] Loaded evaluation from Supabase');
+            setEvaluation({
+              id: data.id,
+              project_id: data.project_id,
+              maude_response: data.maude_response || '',
+              chat_response: data.chat_response || '',
+              evaluation: typeof data.evaluation === 'string' ? data.evaluation : JSON.stringify(data.evaluation),
+              created_at: data.created_at,
+            });
+          } else {
+            setEvaluation(null);
+          }
+        }
+      } catch (err) {
+        console.error('[Eval] Failed to load evaluation:', err);
+        // Fallback to localStorage
+        const stored = localStorage.getItem(`evaluation-${evaluationType}-${projectId}`);
+        if (isMounted && stored) {
           try {
             setEvaluation(JSON.parse(stored));
           } catch {
             setEvaluation(null);
           }
-        } else {
-          setEvaluation(null);
         }
-        setIsLoading(false);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
-    };
+    }
 
-    // Use requestAnimationFrame to avoid synchronous setState warning
-    const frameId = requestAnimationFrame(load);
+    setIsLoading(true);
+    loadEvaluation();
     
     return () => {
       isMounted = false;
-      cancelAnimationFrame(frameId);
     };
-  }, [projectId]);
+  }, [projectId, evaluationType]);
 
   // Save evaluation
-  const saveEvaluation = useCallback((maudeResponse: string, chatResponse: string, evaluationText: string) => {
-    console.log('[Eval] saveEvaluation called, projectId:', projectId);
+  const saveEvaluation = useCallback(async (maudeResponse: string, chatResponse: string, evaluationText: string) => {
+    console.log('[Eval] saveEvaluation called, projectId:', projectId, 'type:', evaluationType);
     if (!projectId) {
       console.log('[Eval] No projectId, skipping save');
       return;
     }
 
-    const data: EvaluationResult = {
+    const localData: EvaluationResult = {
       id: `eval-${Date.now()}`,
       project_id: projectId,
       maude_response: maudeResponse,
@@ -748,19 +774,103 @@ export function useProjectEvaluation(projectId?: string | null) {
       created_at: new Date().toISOString(),
     };
 
-    const key = `evaluation-${projectId}`;
-    console.log('[Eval] Saving to localStorage key:', key);
-    localStorage.setItem(key, JSON.stringify(data));
-    setEvaluation(data);
-    console.log('[Eval] Saved successfully');
-  }, [projectId]);
+    // Handle local projects - use localStorage only
+    if (projectId.startsWith('local-')) {
+      const key = `evaluation-${evaluationType}-${projectId}`;
+      console.log('[Eval] Saving to localStorage key:', key);
+      localStorage.setItem(key, JSON.stringify(localData));
+      setEvaluation(localData);
+      console.log('[Eval] Saved to localStorage successfully');
+      return;
+    }
+
+    // Save to Supabase
+    if (!isSupabaseConfigured) {
+      const key = `evaluation-${evaluationType}-${projectId}`;
+      localStorage.setItem(key, JSON.stringify(localData));
+      setEvaluation(localData);
+      return;
+    }
+
+    try {
+      // Parse evaluation to store as JSONB
+      let evaluationJson;
+      try {
+        evaluationJson = JSON.parse(evaluationText);
+      } catch {
+        evaluationJson = { raw: evaluationText };
+      }
+
+      // Upsert - delete existing and insert new
+      await supabase
+        .from('evaluations')
+        .delete()
+        .eq('project_id', projectId)
+        .eq('evaluation_type', evaluationType);
+
+      const { data, error } = await supabase
+        .from('evaluations')
+        .insert({
+          project_id: projectId,
+          evaluation_type: evaluationType,
+          maude_response: maudeResponse,
+          chat_response: chatResponse,
+          evaluation: evaluationJson,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('[Eval] Error saving evaluation:', error);
+        // Fallback to localStorage
+        const key = `evaluation-${evaluationType}-${projectId}`;
+        localStorage.setItem(key, JSON.stringify(localData));
+        setEvaluation(localData);
+        return;
+      }
+
+      if (data) {
+        console.log('[Eval] Saved evaluation to Supabase');
+        setEvaluation({
+          id: data.id,
+          project_id: data.project_id,
+          maude_response: data.maude_response || '',
+          chat_response: data.chat_response || '',
+          evaluation: typeof data.evaluation === 'string' ? data.evaluation : JSON.stringify(data.evaluation),
+          created_at: data.created_at,
+        });
+      }
+    } catch (err) {
+      console.error('[Eval] Failed to save evaluation:', err);
+      // Fallback to localStorage
+      const key = `evaluation-${evaluationType}-${projectId}`;
+      localStorage.setItem(key, JSON.stringify(localData));
+      setEvaluation(localData);
+    }
+  }, [projectId, evaluationType]);
 
   // Clear evaluation
-  const clearEvaluation = useCallback(() => {
+  const clearEvaluation = useCallback(async () => {
     if (!projectId) return;
-    localStorage.removeItem(`evaluation-${projectId}`);
+
+    // Clear localStorage
+    localStorage.removeItem(`evaluation-${evaluationType}-${projectId}`);
     setEvaluation(null);
-  }, [projectId]);
+
+    // Clear from Supabase if configured
+    if (isSupabaseConfigured && !projectId.startsWith('local-')) {
+      try {
+        await supabase
+          .from('evaluations')
+          .delete()
+          .eq('project_id', projectId)
+          .eq('evaluation_type', evaluationType);
+        console.log('[Eval] Cleared evaluation from Supabase');
+      } catch (err) {
+        console.error('[Eval] Failed to clear evaluation:', err);
+      }
+    }
+  }, [projectId, evaluationType]);
 
   return { evaluation, isLoading, saveEvaluation, clearEvaluation };
 }

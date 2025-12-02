@@ -106,17 +106,21 @@ function ProjectSelector({
   projects, 
   isLoading, 
   onSelect, 
-  onCreate 
+  onCreate,
+  onDelete,
 }: { 
   projects: Project[];
   isLoading: boolean;
   onSelect: (project: Project) => void;
   onCreate: (name: string, description?: string, color?: string, icon?: string) => Promise<Project | null>;
+  onDelete: (id: string) => Promise<boolean>;
 }) {
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [newIcon, setNewIcon] = useState('folder');
   const [isCreating, setIsCreating] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
@@ -127,6 +131,18 @@ function ProjectSelector({
     
     if (project) {
       onSelect(project);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!projectToDelete) return;
+    
+    setIsDeleting(true);
+    const success = await onDelete(projectToDelete.id);
+    setIsDeleting(false);
+    
+    if (success) {
+      setProjectToDelete(null);
     }
   };
 
@@ -274,33 +290,54 @@ function ProjectSelector({
             </h2>
             <div className="space-y-3 sm:space-y-4">
               {projects.map((project) => (
-                <button
+                <div
                   key={project.id}
-                  onClick={() => onSelect(project)}
-                  className="w-full p-4 sm:p-5 bg-white border border-stone-200 rounded-xl sm:rounded-2xl hover:border-stone-300 hover:shadow-md active:scale-[0.99] transition-all group text-left"
+                  className="w-full p-4 sm:p-5 bg-white border border-stone-200 rounded-xl sm:rounded-2xl hover:border-stone-300 hover:shadow-md transition-all group"
                 >
                   <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-br ${getProjectGradient(project.color)} flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform flex-shrink-0`}>
-                      {getProjectIcon(project.icon)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-base sm:text-lg font-semibold text-stone-800 truncate">
-                        {project.name}
-                      </p>
-                      <p className="text-sm sm:text-[15px] text-stone-500 truncate">
-                        {project.description || 'No description'}
-                      </p>
-                    </div>
-                    <div className="text-right flex-shrink-0 flex items-center gap-2">
+                    <button
+                      onClick={() => onSelect(project)}
+                      className="flex items-center gap-4 flex-1 min-w-0 text-left"
+                    >
+                      <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-br ${getProjectGradient(project.color)} flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform flex-shrink-0`}>
+                        {getProjectIcon(project.icon)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-base sm:text-lg font-semibold text-stone-800 truncate">
+                          {project.name}
+                        </p>
+                        <p className="text-sm sm:text-[15px] text-stone-500 truncate">
+                          {project.description || 'No description'}
+                        </p>
+                      </div>
+                    </button>
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <p className="text-xs sm:text-sm text-stone-400 hidden sm:block">
                         {formatRelativeTime(project.updated_at)}
                       </p>
-                      <svg className="w-5 h-5 sm:w-6 sm:h-6 text-stone-300 group-hover:text-stone-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                      </svg>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setProjectToDelete(project);
+                        }}
+                        className="w-9 h-9 rounded-lg flex items-center justify-center text-stone-400 hover:text-red-500 hover:bg-red-50 active:bg-red-100 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+                        title="Delete project"
+                      >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => onSelect(project)}
+                        className="w-9 h-9 rounded-lg flex items-center justify-center text-stone-300 hover:text-stone-500 hover:bg-stone-100 active:bg-stone-200 transition-all"
+                      >
+                        <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
                     </div>
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           </div>
@@ -319,13 +356,56 @@ function ProjectSelector({
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {projectToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in">
+          <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6 animate-scale-in">
+            <div className="flex items-center justify-center w-14 h-14 mx-auto mb-4 rounded-full bg-red-100">
+              <svg className="w-7 h-7 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-stone-800 text-center mb-2">Delete Project?</h3>
+            <p className="text-stone-500 text-center mb-6">
+              Are you sure you want to delete <span className="font-semibold text-stone-700">{projectToDelete.name}</span>? This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setProjectToDelete(null)}
+                disabled={isDeleting}
+                className="flex-1 py-3.5 px-4 text-[15px] font-medium text-stone-600 bg-stone-100 hover:bg-stone-200 active:bg-stone-300 rounded-xl transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="flex-1 py-3.5 px-4 text-[15px] font-semibold text-white bg-red-500 hover:bg-red-600 active:bg-red-700 rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  'Delete'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 export default function Home() {
   const router = useRouter();
-  const { projects, currentProject, isLoading, createProject, selectProject, clearProject } = useProjects();
+  const { projects, currentProject, isLoading, createProject, selectProject, deleteProject, clearProject } = useProjects();
   const { transcript: savedTranscript, isLoading: transcriptLoading, saveTranscript, clearTranscript } = useProjectTranscript(currentProject?.id);
   
   const [transcript, setTranscript] = useState<TranscriptMessage[] | null>(null);
@@ -437,6 +517,7 @@ export default function Home() {
         isLoading={isLoading}
         onSelect={selectProject}
         onCreate={createProject}
+        onDelete={deleteProject}
       />
     );
   }

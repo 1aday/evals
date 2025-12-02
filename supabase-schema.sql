@@ -102,6 +102,22 @@ CREATE TABLE saved_transcripts (
 CREATE INDEX idx_saved_transcripts_project ON saved_transcripts(project_id, created_at DESC);
 
 -- =============================================
+-- 7. Evaluations Table
+-- =============================================
+CREATE TABLE evaluations (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+  evaluation_type TEXT NOT NULL DEFAULT 'debate' CHECK (evaluation_type IN ('debate', 'system')),
+  maude_response TEXT,
+  chat_response TEXT,
+  evaluation JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_evaluations_project ON evaluations(project_id, evaluation_type, created_at DESC);
+
+-- =============================================
 -- Auto-update updated_at trigger
 -- =============================================
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -128,6 +144,10 @@ CREATE TRIGGER update_user_settings_updated_at
   BEFORE UPDATE ON user_settings
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_evaluations_updated_at
+  BEFORE UPDATE ON evaluations
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- =============================================
 -- Row Level Security (RLS)
 -- =============================================
@@ -137,6 +157,7 @@ ALTER TABLE chat_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE saved_transcripts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE evaluations ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow all for projects" ON projects FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for system_prompts" ON system_prompts FOR ALL USING (true) WITH CHECK (true);
@@ -144,6 +165,7 @@ CREATE POLICY "Allow all for chat_sessions" ON chat_sessions FOR ALL USING (true
 CREATE POLICY "Allow all for chat_messages" ON chat_messages FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for user_settings" ON user_settings FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for saved_transcripts" ON saved_transcripts FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for evaluations" ON evaluations FOR ALL USING (true) WITH CHECK (true);
 
 -- =============================================
 -- Done! Database ready.
